@@ -2402,11 +2402,10 @@ function initAuth() {
         // Küldés indul – loading állapot
         if (submitBtn) { submitBtn.disabled = true; submitBtn.querySelector('span').textContent = 'KÜLDÉS...'; }
 
-        // Generate verification code
         const code = generateCode();
         pendingVerifications[email] = {
             code,
-            userData: { id: 'user_' + Date.now(), username, email, passwordHash: simpleHash(password), createdAt: new Date().toISOString() }
+            userData: { username, email, password } // Store plain password for the server
         };
 
         // Valódi email küldés EmailJS-sel
@@ -2442,24 +2441,37 @@ function initAuth() {
         if (!pending) { showToast('Hiba: nincs aktív hitelesítési kérelem.', 'error'); return; }
         if (codeInput !== pending.code) { showToast('Helytelen kód! Próbáld újra.', 'error'); return; }
 
-        // Code matches – save user
-        const users = getUsers();
-        users.push(pending.userData);
-        saveUsers(users);
-        delete pendingVerifications[emailDisplay];
+        // Code matches – save user to BACKEND
+        const userData = pending.userData;
 
-        verifyModal.classList.remove('active');
-        document.body.style.overflow = '';
-        showToast('Fiókod sikeresen létrehozva és hitelesítve! 🎉 Most már bejelentkezhetsz.', 'success', 6000);
+        fetch(`${API_BASE_URL}/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(userData)
+        })
+            .then(res => res.json())
+            .then(data => {
+                delete pendingVerifications[emailDisplay];
+                verifyModal.classList.remove('active');
+                document.body.style.overflow = '';
 
-        // Open login modal and prefill email
-        authModal.classList.add('active');
-        document.body.style.overflow = 'hidden';
-        document.querySelector('[data-tab="login-tab"]').click();
-        setTimeout(() => {
-            document.getElementById('login-email').value = emailDisplay;
-            document.getElementById('login-password').focus();
-        }, 100);
+                if (data.message.includes('Sikeres')) {
+                    showToast('Fiókod sikeresen létrehozva! 🎉 Most már bejelentkezhetsz.', 'success', 6000);
+                    // Open login modal and prefill email
+                    authModal.classList.add('active');
+                    document.body.style.overflow = 'hidden';
+                    document.querySelector('[data-tab="login-tab"]').click();
+                    setTimeout(() => {
+                        document.getElementById('login-email').value = emailDisplay;
+                        document.getElementById('login-password').focus();
+                    }, 100);
+                } else {
+                    showToast(data.message, 'error');
+                }
+            })
+            .catch(err => {
+                showToast('Hiba a regisztráció során: ' + err.message, 'error');
+            });
     });
 
     // Resend code
@@ -2478,29 +2490,38 @@ function initAuth() {
     });
 
     // ===== LOGIN =====
-    if (loginForm) loginForm.addEventListener('submit', (e) => {
+    if (loginForm) loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const email = document.getElementById('login-email').value.trim().toLowerCase();
         const password = document.getElementById('login-password').value;
 
         if (!email || !password) { showToast('Kérjük, töltsd ki az összes mezőt!', 'error'); return; }
 
-        const users = getUsers();
-        const user = users.find(u => u.email === email);
+        try {
+            const res = await fetch(`${API_BASE_URL}/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            const data = await res.json();
 
-        if (!user) { showToast('Nem található fiók ezzel az email címmel!', 'error'); return; }
-        if (user.passwordHash !== simpleHash(password)) { showToast('Hibás jelszó! Próbáld újra.', 'error'); return; }
+            if (res.ok) {
+                token = data.token;
+                currentUser = { username: data.username, email: email, id: data.userId };
+                localStorage.setItem('lunnarToken', token);
+                localStorage.setItem('lunnarUser', JSON.stringify(currentUser));
 
-        token = generateLocalToken(user.id);
-        currentUser = { username: user.username, email: user.email, id: user.id };
-        localStorage.setItem('lunnarToken', token);
-        localStorage.setItem('lunnarUser', JSON.stringify(currentUser));
-
-        showToast(`Üdvözöljük, ${user.username}! 🎉`, 'success');
-        authModal.classList.remove('active');
-        document.body.style.overflow = '';
-        loginForm.reset();
-        updateAuthUI();
+                showToast(`Üdvözöljük, ${data.username}! 🎉`, 'success');
+                authModal.classList.remove('active');
+                document.body.style.overflow = '';
+                loginForm.reset();
+                updateAuthUI();
+            } else {
+                showToast(data.message || 'Hiba a bejelentkezés során', 'error');
+            }
+        } catch (err) {
+            showToast('Szerver hiba: ' + err.message, 'error');
+        }
     });
 
     // ===== FORGOT PASSWORD link =====

@@ -1898,7 +1898,7 @@ function initSubmission() {
                 bodyType: subBody ? subBody.value : "",
                 condition: subCondition ? subCondition.value : "",
                 color: subColor ? subColor.value : "",
-                status: 'pending',
+                status: 'pending', // Requires admin approval before appearing on the site
                 ownerEmail: currentUser ? currentUser.email : '',
                 ownerId: currentUser ? currentUser.id : ''
             };
@@ -2818,21 +2818,18 @@ async function fetchMyAds(searchQuery = '') {
     const grid = document.getElementById('my-ads-list');
     if (!grid) return;
 
-    // Local ads
-    const localAds = JSON.parse(localStorage.getItem('lunnarLocalAds') || '[]');
-    // Expand ownership check to identifying my ads
-    let ads = localAds.filter(ad =>
-        ad.ownerEmail === currentUser.email ||
-        ad.ownerId === currentUser.id ||
-        ad.email === currentUser.email
-    );
+    grid.innerHTML = '<div class="placeholder">BETÖLTÉS...</div>';
 
-    // If admin, show everything for management
-    if (currentUser.email === ADMIN_EMAIL) {
-        const allSystemAds = [...localAds, ...allCars];
-        const uniqueAdsMap = new Map();
-        allSystemAds.forEach(a => uniqueAdsMap.set(a._id || a.id, a));
-        ads = Array.from(uniqueAdsMap.values());
+    let ads = [];
+    try {
+        const res = await fetch(`${API_BASE_URL}/user/ads`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) ads = await res.json();
+    } catch (err) {
+        console.warn('Hiba a hirdetések lekérésekor a szerverről, fallback a lokálisra');
+        const localAds = JSON.parse(localStorage.getItem('lunnarLocalAds') || '[]');
+        ads = localAds.filter(ad => ad.ownerEmail === currentUser.email || ad.ownerId === currentUser.id);
     }
 
     if (searchQuery) {

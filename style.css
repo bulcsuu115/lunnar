@@ -69,6 +69,8 @@ body.light-mode {
 
 html {
     scroll-behavior: smooth;
+    overflow-x: hidden;
+    width: 100%;
 }
 
 body {
@@ -4026,6 +4028,7 @@ body.light-mode .nav-search-btn:hover {
     border-right: 1px solid var(--border-color);
     transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     overflow-y: auto;
+    overflow-x: hidden;
     box-shadow: 4px 0 30px rgba(0, 0, 0, 0.5);
     display: flex;
     flex-direction: column;

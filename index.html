@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html lang="hu">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lunnar | Prémium Használtautó Kereső</title>
+    <meta name="description"
+        content="A legfejlettebb használtautó kereső platform. Válaszd ki álmaid autóját egyszerűen és gyorsan.">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="icon" type="image/png" href="icon.png">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;500;700&family=JetBrains+Mono:wght@300;400;500&display=swap"
+        rel="stylesheet">
+    <!-- EmailJS – valódi email küldés frontendből -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+</head>
+
+<body>
+    <div id="mouse-light"></div>
+
+
+    <!-- ===== HEADER ===== -->
+    <header>
+        <nav>
+            <button id="nav-search-btn" class="nav-search-btn" aria-label="Keresés" title="Gyorskeresés">
+                <img src="https://img.icons8.com/?size=100&id=N0MB26bObOeS&format=png&color=FFFFFF" alt="Search Icon"
+                    style="width: 20px; height: 20px;">
+            </button>
+            <a href="#home" style="text-decoration:none; color:inherit; display:flex; align-items:center;">
+                <div class="logo-area">
+                    <img src="feher logo (1).png" alt="Lunnar Logo" class="nav-logo">
+                    <span class="logo-text">LUNN<span>AR</span></span>
+                </div>
+            </a>
+            <div class="nav-links" id="nav-links">
+                <a href="#hero">Keresés</a>
+                <a href="#brands">Márkák</a>
+                <a href="#listings">Hirdetések</a>
+                <a href="#favorites-view">Kedvencek</a>
+                <a href="#how-it-works">Rólunk</a>
+                <a href="#" class="mobile-sell-link" id="mobile-sell-btn">+ Hirdetés feladása</a>
+            </div>
+
+            <div class="nav-actions">
+                <button id="theme-toggle" class="theme-toggle" aria-label="Téma váltása">
+                    <span class="icon-sun"><img src="https://img.icons8.com/?size=100&id=60002&format=png&color=000000"
+                            alt="Sun Icon" style="width: 20px; height: 20px;"></span>
+                    <span class="icon-moon"><img src="https://img.icons8.com/?size=100&id=54382&format=png&color=FFFFFF"
+                            alt="Moon Icon" style="width: 20px; height: 20px;"></span>
+                </button>
+
+                <div class="user-menu-container">
+                    <a href="javascript:void(0)" class="cta-mini" id="login-nav-btn">Belépés</a>
+
+                    <div id="user-info" class="user-menu" style="display:none;">
+                        <button class="user-avatar-btn" id="profile-toggle">
+                            <span id="user-avatar-letter">?</span>
+                        </button>
+                        <div class="user-dropdown glass" id="user-dropdown">
+                            <div class="user-dropdown-header">
+                                <span id="user-display-name"></span>
+                            </div>
+                            <div class="user-dropdown-divider"></div>
+                            <a href="#view-profile" class="user-dropdown-item">PROFILOM</a>
+                            <a href="javascript:void(0)" class="user-dropdown-item" id="admin-nav-link"
+                                onclick="toggleAdmin()" style="display:none;">ADMINISZTRÁCIÓ</a>
+                            <a href="javascript:void(0)" class="user-dropdown-item logout"
+                                id="logout-nav-btn">KIJELENTKEZÉS</a>
+                        </div>
+                    </div>
+                </div>
+
+                <a href="#" class="cta-mini" id="sell-btn">+ Hirdetés feladása</a>
+
+                <button class="hamburger" id="hamburger" aria-label="Menü megnyitása">
+                    <span></span><span></span><span></span>
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+
+
+        <!-- ===== HOME VIEW ===== -->
+        <div id="view-home" class="page-view active">
+            <!-- ===== HERO + SEARCH ===== -->
+            <section id="hero">
+                <canvas id="starfield"></canvas>
+                <div class="hero-content">
+                    <div class="logo-container">
+                        <img src="feher logo (1).png" alt="Lunnar Logo" class="main-logo">
+                        <div class="logo-glow"></div>
+                    </div>
+                    <h1 class="glitch-text" data-text="LUNNAR">LUNNAR</h1>
+                    <p class="subtitle" id="hero-subtitle"></p>
+
+                    <div class="search-container">
+                        <form id="car-search-form">
+                            <div class="search-grid">
+                                <div class="input-group">
+                                    <label for="brand-select">Márka</label>
+                                    <select id="brand-select">
+                                        <option value="">Összes márka</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label for="model-select">Modell</label>
+                                    <select id="model-select" disabled>
+                                        <option value="">Előbb válassz márkát</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label for="fuel-select">Üzemanyag</label>
+                                    <select id="fuel-select">
+                                        <option value="">Összes</option>
+                                        <option value="Benzin">Benzin</option>
+                                        <option value="Dízel">Dízel</option>
+                                        <option value="Elektromos">Elektromos</option>
+                                        <option value="Hibrid">Hibrid</option>
+                                        <option value="LPG">LPG</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label>Évjárat</label>
+                                    <div class="dual-input">
+                                        <select id="year-from">
+                                            <option value="">Kora (tól)</option>
+                                            <option value="2026">2026</option>
+                                            <option value="2025">2025</option>
+                                            <option value="2024">2024</option>
+                                            <option value="2023">2023</option>
+                                            <option value="2022">2022</option>
+                                            <option value="2021">2021</option>
+                                            <option value="2020">2020</option>
+                                            <option value="2019">2019</option>
+                                            <option value="2018">2018</option>
+                                            <option value="2017">2017</option>
+                                            <option value="2016">2016</option>
+                                            <option value="2015">2015</option>
+                                            <option value="2014">2014</option>
+                                            <option value="2012">2012</option>
+                                            <option value="2010">2010</option>
+                                            <option value="2005">2005</option>
+                                            <option value="2000">2000</option>
+                                            <option value="1990">1990</option>
+                                        </select>
+                                        <select id="year-to">
+                                            <option value="">Kora (ig)</option>
+                                            <option value="2026">2026</option>
+                                            <option value="2025">2025</option>
+                                            <option value="2024">2024</option>
+                                            <option value="2023">2023</option>
+                                            <option value="2022">2022</option>
+                                            <option value="2021">2021</option>
+                                            <option value="2020">2020</option>
+                                            <option value="2019">2019</option>
+                                            <option value="2018">2018</option>
+                                            <option value="2017">2017</option>
+                                            <option value="2016">2016</option>
+                                            <option value="2015">2015</option>
+                                            <option value="2014">2014</option>
+                                            <option value="2012">2012</option>
+                                            <option value="2010">2010</option>
+                                            <option value="2005">2005</option>
+                                            <option value="2000">2000</option>
+                                            <option value="1990">1990</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label>Árkeret (Ft)</label>
+                                    <div class="dual-input">
+                                        <select id="price-from">
+                                            <option value="">Ár (tól)</option>
+                                            <option value="0">0 Ft</option>
+                                            <option value="500000">500.000 Ft</option>
+                                            <option value="1000000">1.000.000 Ft</option>
+                                            <option value="2000000">2.000.000 Ft</option>
+                                            <option value="3000000">3.000.000 Ft</option>
+                                            <option value="4000000">4.000.000 Ft</option>
+                                            <option value="5000000">5.000.000 Ft</option>
+                                            <option value="6000000">6.000.000 Ft</option>
+                                            <option value="7000000">7.000.000 Ft</option>
+                                            <option value="8000000">8.000.000 Ft</option>
+                                            <option value="10000000">10.000.000 Ft</option>
+                                            <option value="12000000">12.000.000 Ft</option>
+                                            <option value="15000000">15.000.000 Ft</option>
+                                        </select>
+                                        <select id="price-to">
+                                            <option value="">Ár (ig)</option>
+                                            <option value="1000000">1.000.000 Ft</option>
+                                            <option value="2000000">2.000.000 Ft</option>
+                                            <option value="3000000">3.000.000 Ft</option>
+                                            <option value="4000000">4.000.000 Ft</option>
+                                            <option value="5000000">5.000.000 Ft</option>
+                                            <option value="6000000">6.000.000 Ft</option>
+                                            <option value="7000000">7.000.000 Ft</option>
+                                            <option value="8000000">8.000.000 Ft</option>
+                                            <option value="10000000">10.000.000 Ft</option>
+                                            <option value="12000000">12.000.000 Ft</option>
+                                            <option value="15000000">15.000.000 Ft</option>
+                                            <option value="20000000">20.000.000 Ft</option>
+                                            <option value="50000000">50.000.000 Ft+</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label>Kilométer</label>
+                                    <div class="dual-input">
+                                        <input type="number" id="km-from" placeholder="Tól">
+                                        <input type="number" id="km-to" placeholder="Ig">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ===== DETAILED SEARCH TOGGLE ===== -->
+                            <div class="detailed-search-toggle-container">
+                                <button type="button" id="detailed-search-toggle" class="text-btn">
+                                    <span class="icon">＋</span> TOVÁBBI KERESÉSI OPCIÓK
+                                </button>
+                            </div>
+
+                            <!-- ===== DETAILED SEARCH BOX ===== -->
+                            <div id="detailed-search-box" class="detailed-search-box glass-premium">
+                                <div class="search-grid">
+                                    <div class="input-group">
+                                        <label>Váltó</label>
+                                        <select id="transmission-select">
+                                            <option value="">Mindegy</option>
+                                            <option value="Manuális">Manuális</option>
+                                            <option value="Automata">Automata</option>
+                                        </select>
+                                    </div>
+                                    <div class="input-group">
+                                        <label>Kivitel</label>
+                                        <select id="body-select">
+                                            <option value="">Mindegy</option>
+                                            <option value="Kisautó">Kisautó</option>
+                                            <option value="Limuzin">Limuzin</option>
+                                            <option value="Kombi">Kombi</option>
+                                            <option value="SUV & Pick-up">SUV & Pick-up</option>
+                                            <option value="Kupé">Kupé</option>
+                                            <option value="Kabriólet">Kabriólet</option>
+                                            <option value="Egyterű">Egyterű</option>
+                                            <option value="Transzporter">Transzporter</option>
+                                        </select>
+                                    </div>
+                                    <div class="input-group">
+                                        <label>Állapot</label>
+                                        <select id="condition-select">
+                                            <option value="">Mindegy</option>
+                                            <option value="Új">Új</option>
+                                            <option value="Újszerű">Újszerű</option>
+                                            <option value="Használt">Használt</option>
+                                            <option value="Sérült">Sérült</option>
+                                        </select>
+                                    </div>
+                                    <div class="input-group">
+                                        <label>Szín</label>
+                                        <select id="color-select">
+                                            <option value="">Mindegy</option>
+                                            <option value="Fekete">Fekete</option>
+                                            <option value="Fehér">Fehér</option>
+                                            <option value="Ezüst">Ezüst</option>
+                                            <option value="Szürke">Szürke</option>
+                                            <option value="Kék">Kék</option>
+                                            <option value="Piros">Piros</option>
+                                            <option value="Zöld">Zöld</option>
+                                            <option value="Sárga">Sárga</option>
+                                            <option value="Barna">Barna</option>
+                                        </select>
+                                    </div>
+                                    <div class="input-group">
+                                        <label>Teljesítmény (LE)</label>
+                                        <div class="dual-input">
+                                            <input type="number" id="hp-from" placeholder="Tól">
+                                            <input type="number" id="hp-to" placeholder="Ig">
+                                        </div>
+                                    </div>
+                                    <div class="input-group">
+                                        <label>Helyszín & Távolság</label>
+                                        <div class="dual-input">
+                                            <div style="position:relative; flex:1; display:flex;">
+                                                <input type="text" id="city-search" placeholder="Város"
+                                                    style="flex:1; padding-right: 30px;">
+                                                <button type="button" id="geo-btn" class="geo-btn"
+                                                    title="Jelenlegi helyzet"></button>
+                                            </div>
+                                            <select id="distance-select" style="width:100px;">
+                                                <option value="">+0 km</option>
+                                                <option value="20">+20 km</option>
+                                                <option value="50">+50 km</option>
+                                                <option value="100">+100 km</option>
+                                                <option value="200">+200 km</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="search-actions">
+                                <button type="submit" class="cta-button primary" id="search-btn">
+                                    <img src="https://img.icons8.com/?size=100&id=N0MB26bObOeS&format=png&color=000000"
+                                        alt="Search Icon" style="width: 14px; height: 14px;"> <span
+                                        id="search-count">...</span> autó között keresés
+                                </button>
+                                <button type="reset" class="cta-button secondary">Szűrők törlése</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== POPULAR BRANDS ===== -->
+            <section id="brands">
+                <div class="section-header">
+                    <h2>NÉPSZERŰ MÁRKÁK</h2>
+                    <div class="line"></div>
+                </div>
+                <div class="brands-grid" id="brands-grid">
+                    <!-- JS fills this -->
+                </div>
+            </section>
+
+            <!-- ===== BODY TYPES ===== -->
+            <section id="body-types">
+                <div class="section-header">
+                    <h2>KERESÉS KAROSSZÉRIATÍPUS ALAPJÁN</h2>
+                    <div class="line"></div>
+                </div>
+                <div class="body-types-grid">
+                    <div class="body-type-item" data-body="Kisautó">
+                        <div class="body-type-icon">
+                            <svg viewBox="0 0 64 40" xmlns="http://www.w3.org/2000/svg">
+                                <g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M8 30h48M10 30l3-10h10l6-6h14l8 6h3l4 10" />
+                                    <circle cx="18" cy="32" r="4" />
+                                    <circle cx="46" cy="32" r="4" />
+                                    <path d="M29 14v8M23 20l1-6M43 14l5 6" />
+                                </g>
+                            </svg>
+                        </div>
+                        <span>Kisautó</span>
+                    </div>
+                    <div class="body-type-item" data-body="SUV & Pick-up">
+                        <div class="body-type-icon">
+                            <svg viewBox="0 0 64 40" xmlns="http://www.w3.org/2000/svg">
+                                <g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M6 30h52M8 30l2-8h12l5-8h18l9 8h2l2 8" />
+                                    <circle cx="18" cy="32" r="5" />
+                                    <circle cx="48" cy="32" r="5" />
+                                    <path d="M27 14v8M22 22l1-8M45 14l7 8" />
+                                </g>
+                            </svg>
+                        </div>
+                        <span>SUV & Pick-up</span>
+                    </div>
+                    <div class="body-type-item" data-body="Transzporter">
+                        <div class="body-type-icon">
+                            <svg viewBox="0 0 64 40" xmlns="http://www.w3.org/2000/svg">
+                                <g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M4 30h56M6 30V12h36v18M42 12l14 8v10" />
+                                    <circle cx="16" cy="32" r="4" />
+                                    <circle cx="50" cy="32" r="4" />
+                                    <path d="M42 16h6l6 4" />
+                                    <rect x="10" y="16" width="8" height="6" rx="1" />
+                                    <rect x="22" y="16" width="8" height="6" rx="1" />
+                                </g>
+                            </svg>
+                        </div>
+                        <span>Transzporter</span>
+                    </div>
+                    <div class="body-type-item" data-body="Kabriólet">
+                        <div class="body-type-icon">
+                            <svg viewBox="0 0 64 40" xmlns="http://www.w3.org/2000/svg">
+                                <g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M8 30h48M10 30l4-8h10l3-4h14l6 4h5l6 8" />
+                                    <circle cx="18" cy="32" r="4" />
+                                    <circle cx="46" cy="32" r="4" />
+                                    <path d="M27 18c8 0 14 1 17 4" />
+                                    <path d="M24 22l3-4" />
+                                </g>
+                            </svg>
+                        </div>
+                        <span>Kabriólet</span>
+                    </div>
+                    <div class="body-type-item" data-body="Van & Kisbusz">
+                        <div class="body-type-icon">
+                            <svg viewBox="0 0 64 40" xmlns="http://www.w3.org/2000/svg">
+                                <g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M4 30h56M6 30V10h38l12 8v12" />
+                                    <circle cx="16" cy="32" r="4" />
+                                    <circle cx="48" cy="32" r="4" />
+                                    <rect x="10" y="14" width="7" height="6" rx="1" />
+                                    <rect x="21" y="14" width="7" height="6" rx="1" />
+                                    <rect x="32" y="14" width="7" height="6" rx="1" />
+                                    <path d="M48 16l6 2" />
+                                </g>
+                            </svg>
+                        </div>
+                        <span>Van & Kisbusz</span>
+                    </div>
+                    <div class="body-type-item" data-body="Limuzin">
+                        <div class="body-type-icon">
+                            <svg viewBox="0 0 64 40" xmlns="http://www.w3.org/2000/svg">
+                                <g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M6 30h52M8 30l4-10h12l5-6h14l5 6h6l4 10" />
+                                    <circle cx="16" cy="32" r="4" />
+                                    <circle cx="48" cy="32" r="4" />
+                                    <path d="M29 14v8M24 22l1-8M43 14l5 8M35 14v8" />
+                                </g>
+                            </svg>
+                        </div>
+                        <span>Limuzin</span>
+                    </div>
+                    <div class="body-type-item" data-body="Kombi">
+                        <div class="body-type-icon">
+                            <svg viewBox="0 0 64 40" xmlns="http://www.w3.org/2000/svg">
+                                <g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M6 30h52M8 30l4-10h12l5-6h27v16" />
+                                    <circle cx="16" cy="32" r="4" />
+                                    <circle cx="48" cy="32" r="4" />
+                                    <path d="M29 14v8M24 22l1-8M56 14v16M42 14v8" />
+                                </g>
+                            </svg>
+                        </div>
+                        <span>Kombi</span>
+                    </div>
+                    <div class="body-type-item" data-body="Kupé">
+                        <div class="body-type-icon">
+                            <svg viewBox="0 0 64 40" xmlns="http://www.w3.org/2000/svg">
+                                <g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M8 30h48M10 30l4-10h8l8-6h18l4 6h2l4 10" />
+                                    <circle cx="18" cy="32" r="4" />
+                                    <circle cx="46" cy="32" r="4" />
+                                    <path d="M30 14v8M22 20l4-8M48 14l4 6" />
+                                </g>
+                            </svg>
+                        </div>
+                        <span>Kupé</span>
+                    </div>
+                </div>
+
+            </section>
+            <section id="listings">
+                <div class="section-header">
+                    <h2>LEGÚJABB AJÁNLATOK</h2>
+                    <div class="line"></div>
+                </div>
+                <div class="listings-toolbar">
+                    <div class="results-info" id="results-count">Összesen <strong>12</strong> találat</div>
+                    <div class="sort-group">
+                        <label for="sort-select">Rendezés:</label>
+                        <select id="sort-select">
+                            <option value="newest">Legújabb</option>
+                            <option value="price-asc">Ár ↑</option>
+                            <option value="price-desc">Ár ↓</option>
+                            <option value="km-asc">Km ↑</option>
+                            <option value="year-desc">Legújabb évjárat</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="car-list" class="car-grid">
+                    <div class="placeholder">HIRDETÉSEK BETÖLTÉSE...</div>
+                </div>
+            </section>
+
+            <!-- ===== HOW IT WORKS ===== -->
+            <section id="how-it-works">
+                <div class="section-header">
+                    <h2>HOGYAN MŰKÖDIK</h2>
+                    <div class="line"></div>
+                </div>
+                <div class="steps-grid">
+                    <div class="step-card">
+                        <div class="step-number">01</div>
+                        <div class="step-icon">🔍</div>
+                        <h3>KERESS</h3>
+                        <p>Használd a részletes keresőnket, hogy szűkítsd a találatokat márka, ár, évjárat és egyéb
+                            paraméterek alapján.</p>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-number">02</div>
+                        <div class="step-icon">⭐</div>
+                        <h3>VÁLASSZ</h3>
+                        <p>Hasonlítsd össze az ajánlatokat, mentsd el a kedvenceidet, és nézd meg a részletes
+                            leírásokat.
+                        </p>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-number">03</div>
+                        <div class="step-icon">🤝</div>
+                        <h3>VÁSÁROLJ</h3>
+                        <p>Lépj kapcsolatba az eladóval közvetlenül, és kösd meg az üzletet biztonságosan.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== STATS ===== -->
+            <section id="stats" class="fade-in">
+                <div class="stats-grid">
+
+                    <div class="stat-item">
+                        <div class="stat-value" data-target="12437">0</div>
+                        <div class="stat-label">HIRDETÉS</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" data-target="4820">0</div>
+                        <div class="stat-label">ELÉGEDETT VÁSÁRLÓ</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" data-target="350">0</div>
+                        <div class="stat-label">PARTNER KERESKEDÉS</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value status-online" data-target="98">0</div>
+                        <div class="stat-label">% ELÉGEDETTSÉG</div>
+                    </div>
+                </div>
+            </section>
+
+        </div> <!-- End world-container -->
+
+        <!-- ===== AD DETAIL VIEW ===== -->
+
+        <div id="view-ad-detail" class="page-view" style="display:none;">
+            <section style="padding: 2rem 1rem;">
+                <div id="detail-page-content">
+                    <!-- JS renders detailed ad here -->
+                </div>
+            </section>
+        </div>
+
+        <!-- ===== FAVORITES VIEW ===== -->
+        <div id="view-favorites" class="page-view" style="display:none;">
+            <section style="padding: 6rem 2rem;">
+                <div class="section-header">
+                    <h2>KEDVENC AUTÓIM</h2>
+                    <div class="line"></div>
+                </div>
+                <div id="favorites-grid" class="car-grid">
+                    <!-- JS renders favorites here -->
+                </div>
+            </section>
+        </div>
+
+
+
+        <!-- ===== COMPARE TOOL FLOATING BAR & MODAL ===== -->
+        <div id="compare-bar" class="compare-bar" style="display:none;">
+            <div class="compare-items" id="compare-items-container">
+                <!-- JS fills this -->
+            </div>
+            <div class="compare-actions">
+                <button class="cta-button primary" id="open-compare-btn">Összehasonlítás</button>
+                <button class="remove-img-btn" id="clear-compare-btn" title="Törlés mind"
+                    style="background-color: #fff; color: #000;">&times;</button>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="compare-modal">
+            <div class="modal-content" style="max-width: 1000px;">
+                <button class="modal-close" id="compare-close">&times;</button>
+                <div class="modal-body-inner">
+                    <h2 class="modal-title">AUTÓK ÖSSZEHASONLÍTÁSA</h2>
+                    <div id="compare-table-container" class="compare-table-container">
+                        <!-- JS fills this with a responsive table or flex grid -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== AD SUBMISSION MODAL ===== -->
+        <div class="modal-overlay" id="submission-modal">
+            <div class="modal-content">
+                <button class="modal-close" id="submission-close">&times;</button>
+                <div class="modal-body-inner">
+                    <h2 class="modal-title">ÚJ HIRDETÉS FELADÁSA</h2>
+                    <form id="ad-submission-form" class="dashboard-form">
+                        <!-- Section 1: Basic Info -->
+                        <div class="form-section">
+                            <h3 class="section-title"><span class="icon">🚗</span> Alapadatok</h3>
+                            <div class="search-grid">
+                                <div class="input-group">
+                                    <label><span class="input-icon">🏷️</span> Márka</label>
+                                    <select id="sub-brand" required>
+                                        <option value="" disabled selected>Válassz márkát</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label><span class="input-icon">🚘</span> Modell</label>
+                                    <select id="sub-model" required disabled>
+                                        <option value="" disabled selected>Előbb válassz márkát</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label><span class="icon">💰</span> Ár (Ft)</label>
+                                    <input type="number" id="sub-price" required placeholder="5900000">
+                                </div>
+                                <div class="input-group">
+                                    <label><span class="icon">📅</span> Évjárat</label>
+                                    <input type="number" id="sub-year" required placeholder="2018" min="1950"
+                                        max="2026">
+                                </div>
+                                <div class="input-group">
+                                    <label><span class="input-icon">🏎️</span> Kivitel</label>
+                                    <select id="sub-body" required>
+                                        <option value="" disabled selected>Válassz kivitelt</option>
+                                        <option value="Kisautó">Kisautó</option>
+                                        <option value="Limuzin">Limuzin</option>
+                                        <option value="Kombi">Kombi</option>
+                                        <option value="SUV & Pick-up">SUV & Pick-up</option>
+                                        <option value="Kupé">Kupé</option>
+                                        <option value="Kabriólet">Kabriólet</option>
+                                        <option value="Egyterű">Egyterű</option>
+                                        <option value="Transzporter">Transzporter</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label><span class="input-icon">✨</span> Állapot</label>
+                                    <select id="sub-condition" required>
+                                        <option value="" disabled selected>Válassz állapotot</option>
+                                        <option value="Új">Új</option>
+                                        <option value="Újszerű">Újszerű</option>
+                                        <option value="Használt">Használt</option>
+                                        <option value="Sérült">Sérült</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label><span class="input-icon">🎨</span> Szín</label>
+                                    <select id="sub-color" required>
+                                        <option value="" disabled selected>Válassz színt</option>
+                                        <option value="Fekete">Fekete</option>
+                                        <option value="Fehér">Fehér</option>
+                                        <option value="Ezüst">Ezüst</option>
+                                        <option value="Szürke">Szürke</option>
+                                        <option value="Kék">Kék</option>
+                                        <option value="Piros">Piros</option>
+                                        <option value="Zöld">Zöld</option>
+                                        <option value="Sárga">Sárga</option>
+                                        <option value="Barna">Barna</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section 2: Technical -->
+                        <div class="form-section">
+                            <h3 class="section-title"><span class="icon">⚙️</span> Műszaki adatok</h3>
+                            <div class="search-grid">
+                                <div class="input-group">
+                                    <label><span class="input-icon">⛽</span> Üzemanyag</label>
+                                    <select id="sub-fuel" required>
+                                        <option value="" disabled selected>Válassz típust</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label><span class="input-icon">🕹️</span> Váltó</label>
+                                    <select id="sub-transmission" required>
+                                        <option value="" disabled selected>Válassz típust</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label><span class="input-icon">🛣️</span> Kilométer</label>
+                                    <input type="number" id="sub-km" required placeholder="125000">
+                                </div>
+                                <div class="input-group">
+                                    <label><span class="input-icon">⚡</span> Teljesítmény (LE)</label>
+                                    <input type="number" id="sub-hp" required placeholder="150">
+                                </div>
+                                <div class="input-group" style="grid-column: span 2;">
+                                    <label><span class="input-icon">🔧</span> Hengerűrtartalom (ccm)</label>
+                                    <input type="number" id="sub-ccm" required placeholder="1998">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section 3: Contact -->
+                        <div class="form-section">
+                            <h3 class="section-title"><span class="icon">📍</span> Elérhetőség</h3>
+                            <div class="search-grid">
+                                <div class="input-group">
+                                    <label><span class="input-icon">🏙️</span> Város</label>
+                                    <input type="text" id="sub-city" required placeholder="Budapest">
+                                </div>
+                                <div class="input-group">
+                                    <label><span class="input-icon">📞</span> Telefonszám</label>
+                                    <input type="tel" id="sub-phone" required placeholder="+36 30 123 4567">
+                                </div>
+                                <div class="input-group" style="grid-column: span 2;">
+                                    <label><span class="input-icon">📧</span> Email cím</label>
+                                    <input type="email" id="sub-email" required placeholder="pelda@email.hu">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section 4: Media & Desc -->
+                        <div class="form-section">
+                            <h3 class="section-title"><span class="icon">📸</span> Média és Leírás</h3>
+                            <div class="input-group">
+                                <label><span class="input-icon">🖼️</span> Képek feltöltése</label>
+                                <div class="upload-zone" onclick="document.getElementById('sub-img-file').click()">
+                                    <input type="file" id="sub-img-file" accept="image/*" multiple hidden>
+                                    <div class="upload-content">
+                                        <span class="upload-icon">📁</span>
+                                        <p>Kattints a képek feltöltéséhez vagy húzd ide őket</p>
+                                        <span class="upload-info">(Több kép is választható)</span>
+                                    </div>
+                                </div>
+                                <div id="img-preview" class="preview-container">
+                                    <!-- JS renders preview cards here -->
+                                </div>
+                            </div>
+                            <div class="input-group" style="margin-top: 1.5rem;">
+                                <label><span class="input-icon">📝</span> Leírás</label>
+                                <textarea id="sub-desc" rows="6"
+                                    placeholder="Írj részletes leírást az autóról..."></textarea>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="cta-button primary">
+                                <span>HIRDETÉS BEKÜLDÉSE</span>
+                                <span class="btn-arrow">→</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== AUTH MODAL ===== -->
+        <div class="modal-overlay" id="auth-modal">
+            <div class="modal-content auth-modal-content">
+                <button class="modal-close" id="auth-close">&times;</button>
+                <div class="modal-body-inner">
+                    <div class="auth-brand">
+                        <span class="auth-brand-name">LUNNAR</span>
+                    </div>
+                    <div class="tabs">
+                        <button class="tab-btn active" data-tab="login-tab">BELÉPÉS</button>
+                        <button class="tab-btn" data-tab="register-tab">REGISZTRÁCIÓ</button>
+                    </div>
+
+                    <!-- ===== LOGIN TAB ===== -->
+                    <div id="login-tab" class="tab-content" style="min-height: 480px;">
+                        <h2 class="modal-title">ÜDV ÚJRA!</h2>
+                        <p class="modal-subtitle">Jelentkezz be a fiókodba a folytatáshoz.</p>
+                        <form id="login-form" class="auth-form">
+                            <div class="input-group">
+                                <label for="login-email">
+                                    <span class="input-icon">📧</span> Email cím
+                                </label>
+                                <input type="email" id="login-email" required placeholder="pelda@email.hu"
+                                    autocomplete="email">
+                            </div>
+                            <div class="input-group">
+                                <label for="login-password">
+                                    <span class="input-icon">🔒</span> Jelszó
+                                </label>
+                                <div class="password-wrapper">
+                                    <input type="password" id="login-password" required placeholder="••••••••"
+                                        autocomplete="current-password">
+                                    <button type="button" class="password-toggle" data-target="login-password"
+                                        title="Jelszó megjelenítése">👁</button>
+                                </div>
+                            </div>
+
+                            <div class="auth-extra">
+                                <label class="auth-checkbox">
+                                    <input type="checkbox" id="login-remember">
+                                    <span class="checkmark"></span>
+                                    Emlékezz rám
+                                </label>
+                                <a href="#" class="forgot-password">Elfelejtett jelszó?</a>
+                            </div>
+
+                            <button type="submit" class="cta-button primary auth-submit-btn">
+                                <span>BELÉPÉS</span>
+                                <span class="btn-arrow">→</span>
+                            </button>
+                        </form>
+                        <p class="auth-switch-text">
+                            Nincs még fiókod? <a href="#" class="auth-switch-link"
+                                data-tab="register-tab">Regisztrálj!</a>
+                        </p>
+                    </div>
+
+                    <!-- ===== REGISTER TAB ===== -->
+                    <div id="register-tab" class="tab-content" style="display:none; min-height: 480px;">
+                        <h2 class="modal-title">CSATLAKOZZ!</h2>
+                        <p class="modal-subtitle">Hozd létre fiókodat és kezdd el böngészni a kínálatot.</p>
+                        <form id="register-form" class="auth-form">
+                            <div class="input-group">
+                                <label for="reg-username">
+                                    <span class="input-icon">👤</span> Felhasználónév
+                                </label>
+                                <input type="text" id="reg-username" required placeholder="pl. Kovács János"
+                                    minlength="3" autocomplete="username">
+                            </div>
+                            <div class="input-group">
+                                <label for="reg-email">
+                                    <span class="input-icon">📧</span> Email cím
+                                </label>
+                                <input type="email" id="reg-email" required placeholder="pelda@email.hu"
+                                    autocomplete="email">
+                            </div>
+                            <div class="input-group">
+                                <label for="reg-password">
+                                    <span class="input-icon">🔒</span> Jelszó
+                                </label>
+                                <div class="password-wrapper">
+                                    <input type="password" id="reg-password" required placeholder="••••••••"
+                                        autocomplete="new-password">
+                                    <button type="button" class="password-toggle" data-target="reg-password"
+                                        title="Jelszó megjelenítése">👁</button>
+                                </div>
+
+                                <ul class="password-requirements" id="reg-password-requirements">
+                                    <li id="req-length" class="requirement">Legalább 6 karakter</li>
+                                    <li id="req-upper" class="requirement">Legalább egy nagybetű</li>
+                                    <li id="req-number" class="requirement">Legalább egy szám</li>
+                                </ul>
+                            </div>
+                            <div class="input-group">
+                                <label for="reg-password-confirm">
+                                    <span class="input-icon">🔒</span> Jelszó megerősítése
+                                </label>
+                                <div class="password-wrapper">
+                                    <input type="password" id="reg-password-confirm" required placeholder="••••••••"
+                                        autocomplete="new-password">
+                                    <button type="button" class="password-toggle" data-target="reg-password-confirm"
+                                        title="Jelszó megjelenítése">👁</button>
+                                </div>
+                            </div>
+                            <label class="auth-checkbox">
+                                <input type="checkbox" id="reg-terms" required>
+                                <span class="checkmark"></span>
+                                Elfogadom az <a href="#" style="color: var(--accent-color, #667eea);">Általános
+                                    Szerződési
+                                    Feltételeket</a>
+                            </label>
+                            <button type="submit" class="cta-button primary auth-submit-btn">
+                                <span>FIÓK LÉTREHOZÁSA</span>
+                                <span class="btn-arrow">→</span>
+                            </button>
+                        </form>
+                        <p class="auth-switch-text">
+                            Már van fiókod? <a href="#" class="auth-switch-link" data-tab="login-tab">Jelentkezz
+                                be!</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== FORGOT PASSWORD MODAL ===== -->
+        <div class="modal-overlay" id="forgot-modal">
+            <div class="modal-content auth-modal-content" style="max-width:420px;">
+                <button class="modal-close" id="forgot-close">&times;</button>
+                <div class="modal-body-inner">
+                    <div class="auth-brand">
+                        <span class="auth-brand-name">LUNNAR</span>
+                    </div>
+                    <h2 class="modal-title" style="margin-bottom:0.5rem;">JELSZÓ VISSZAÁLLÍTÁS 🔑</h2>
+                    <p class="modal-subtitle">Add meg az email címedet és küldünk egy visszaállítási kódot.</p>
+
+                    <!-- Step 1: Enter email -->
+                    <div id="forgot-step-1">
+                        <form id="forgot-form" class="auth-form" style="margin-top:1.5rem;">
+                            <div class="input-group">
+                                <label for="forgot-email">
+                                    <span class="input-icon">📧</span> Email cím
+                                </label>
+                                <input type="email" id="forgot-email" required placeholder="pelda@email.hu"
+                                    autocomplete="email">
+                            </div>
+                            <button type="submit" class="cta-button primary auth-submit-btn">
+                                <span>KÓD KÜLDÉSE</span>
+                                <span class="btn-arrow">→</span>
+                            </button>
+                        </form>
+                        <p class="auth-switch-text">
+                            Eszedbe jutott? <a href="#" class="auth-switch-link" id="back-to-login-from-forgot">Vissza a
+                                belépéshez</a>
+                        </p>
+                    </div>
+
+                    <!-- Step 2: Enter code + new password -->
+                    <div id="forgot-step-2" style="display:none;">
+                        <p class="modal-subtitle" style="margin-top:1rem; color: #10b981;">✅ Kódot elküldtük!
+                            (Ellenőrizd a
+                            konzolt demo módban.)</p>
+                        <form id="forgot-reset-form" class="auth-form" style="margin-top:1rem;">
+                            <div class="input-group">
+                                <label for="forgot-code">
+                                    <span class="input-icon">🔢</span> Visszaállítási kód (6 jegyű)
+                                </label>
+                                <input type="text" id="forgot-code" required placeholder="pl. 482917" maxlength="6"
+                                    autocomplete="one-time-code">
+                            </div>
+                            <div class="input-group">
+                                <label for="forgot-new-pw">
+                                    <span class="input-icon">🔒</span> Új jelszó
+                                </label>
+                                <div class="password-wrapper">
+                                    <input type="password" id="forgot-new-pw" required placeholder="••••••••"
+                                        autocomplete="new-password">
+                                    <button type="button" class="password-toggle" data-target="forgot-new-pw"
+                                        title="Jelszó megjelenítése">👁</button>
+                                </div>
+                                <ul class="password-requirements" id="forgot-password-requirements">
+                                    <li id="freq-length" class="requirement">Legalább 6 karakter</li>
+                                    <li id="freq-upper" class="requirement">Legalább egy nagybetű</li>
+                                    <li id="freq-number" class="requirement">Legalább egy szám</li>
+                                </ul>
+                            </div>
+                            <button type="submit" class="cta-button primary auth-submit-btn">
+                                <span>JELSZÓ MEGVÁLTOZTATÁSA</span>
+                                <span class="btn-arrow">→</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== EMAIL VERIFICATION MODAL ===== -->
+        <div class="modal-overlay" id="verify-modal">
+            <div class="modal-content auth-modal-content" style="max-width:420px;">
+                <div class="modal-body-inner">
+                    <div class="auth-brand">
+                        <span class="auth-brand-name">LUNNAR</span>
+                    </div>
+                    <h2 class="modal-title" style="margin-bottom:0.5rem;">FIÓK HITELESÍTÉS 📬</h2>
+                    <p class="modal-subtitle">Ellenőrzési kódot küldtünk a megadott email címedre. Add meg a kódot a
+                        fiók
+                        aktiválásához.</p>
+                    <p id="verify-email-display" class="modal-subtitle"
+                        style="margin-top:0.5rem; font-weight:600; color: var(--accent-color);"></p>
+                    <p class="modal-subtitle" style="font-size:0.75rem; opacity:0.6;">(Demo módban: ellenőrizd a
+                        böngésző
+                        konzolját a kódért.)</p>
+                    <form id="verify-form" class="auth-form" style="margin-top:1.5rem;">
+                        <div class="input-group">
+                            <label for="verify-code">
+                                <span class="input-icon">🔢</span> Hitelesítési kód (6 jegyű)
+                            </label>
+                            <div style="display:flex; gap:0.5rem;">
+                                <input type="text" id="verify-code" required placeholder="pl. 739281" maxlength="6"
+                                    autocomplete="one-time-code"
+                                    style="letter-spacing:4px; font-size:1.2rem; text-align:center;">
+                            </div>
+                        </div>
+                        <button type="submit" class="cta-button primary auth-submit-btn">
+                            <span>FIÓK AKTIVÁLÁSA</span>
+                            <span class="btn-arrow">→</span>
+                        </button>
+                    </form>
+                    <p class="auth-switch-text">
+                        Nem kaptad meg? <a href="#" class="auth-switch-link" id="resend-code">Kód újraküldése</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- ===== PROFILE VIEW ===== -->
+        <div id="view-profile" class="page-view">
+            <section class="profile-section">
+                <div class="profile-dashboard glass">
+                    <!-- Sidebar -->
+                    <aside class="profile-sidebar">
+                        <div class="profile-user-card">
+                            <div class="profile-avatar-wrapper">
+                                <div class="profile-avatar" id="profile-avatar">?</div>
+                                <div class="avatar-glow"></div>
+                            </div>
+                            <div class="profile-user-info">
+                                <h2 id="profile-username">FELHASZNÁLÓNÉV</h2>
+                                <p id="profile-email" class="text-muted">email@pelda.hu</p>
+                            </div>
+                        </div>
+
+                        <nav class="profile-nav">
+                            <button class="profile-tab-btn active" data-profile-tab="my-listings">
+                                <span class="icon">🚗</span>
+                                <span>Hirdetéseim</span>
+                                <span class="badge-mini" id="stat-ads-count">0</span>
+                            </button>
+                            <button class="profile-tab-btn" data-profile-tab="my-favorites">
+                                <span class="icon">❤️</span>
+                                <span>Kedvenceim</span>
+                                <span class="badge-mini" id="stat-favs-count">0</span>
+                            </button>
+                            <button class="profile-tab-btn" data-profile-tab="settings">
+                                <span class="icon">⚙️</span>
+                                <span>Beállítások</span>
+                            </button>
+                        </nav>
+
+                        <div class="profile-sidebar-footer">
+                            <span class="badge-date" id="profile-join-date">Tag: 2026</span>
+                        </div>
+                    </aside>
+
+                    <!-- Main Content -->
+                    <main class="profile-content">
+                        <!-- My Listings Tab -->
+                        <div class="profile-tab-content active" id="profile-tab-my-listings">
+                            <div class="content-header">
+                                <h3>SAJÁT HIRDETÉSEIM</h3>
+                                <div class="profile-search-container">
+                                    <input type="text" id="my-ads-search" placeholder="Keresés a hirdetéseim között..."
+                                        class="profile-search-input">
+                                    <span class="search-icon">🔍</span>
+                                </div>
+                                <div class="header-line"></div>
+                            </div>
+                            <div id="my-ads-list" class="car-grid">
+                                <!-- User's ads rendered here -->
+                            </div>
+                        </div>
+
+                        <!-- Favorites Tab -->
+                        <div class="profile-tab-content" id="profile-tab-my-favorites">
+                            <div class="content-header">
+                                <h3>KEDVENC HIRDETÉSEIM</h3>
+                                <div class="header-line"></div>
+                            </div>
+                            <div id="my-favorites-list" class="car-grid">
+                                <!-- Favorited cars rendered here -->
+                            </div>
+                        </div>
+
+                        <!-- Settings Tab -->
+                        <div class="profile-tab-content" id="profile-tab-settings">
+                            <div class="content-header">
+                                <h3>FIÓK BEÁLLÍTÁSOK</h3>
+                                <div class="header-line"></div>
+                            </div>
+                            <div class="settings-grid">
+                                <div class="settings-card glass-premium">
+                                    <h4>Jelszó Módosítása</h4>
+                                    <p class="text-muted">Biztonságod érdekében rendszeresen frissítsd jelszavad.</p>
+                                    <button class="cta-button primary" onclick="showToast('Hamarosan...', 'info')">
+                                        <span>VÁLTOZTATÁS</span>
+                                    </button>
+                                </div>
+                                <div class="settings-card glass-premium">
+                                    <h4>Értesítések</h4>
+                                    <p class="text-muted">Kezeld, hogyan kapsz értesítést az új hirdetésekről.</p>
+                                    <button class="cta-button" onclick="showToast('Hamarosan...', 'info')">
+                                        <span>BEÁLLÍTÁS</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            </section>
+        </div>
+
+
+        <!-- ===== ADMIN PANEL SECTION ===== -->
+        <section id="admin-panel" style="display:none; padding: 6rem 2rem; background: var(--secondary-bg);">
+            <div class="section-header">
+                <h2>ADMINISZTRÁCIÓ</h2>
+                <div class="line"></div>
+            </div>
+            <div id="admin-ad-list" class="car-grid">
+                <!-- JS renders pending ads here -->
+            </div>
+        </section>
+
+        <!-- ===== AI CHATBOT WIDGET ===== -->
+        <div id="ai-chat-widget" class="ai-chat-widget">
+            <button id="ai-chat-toggle" class="ai-chat-toggle" title="Lunnar AI Asszisztens">
+                <span class="ai-chat-icon">
+                    <img src="https://img.icons8.com/?size=100&id=rfkqAnUspAnn&format=png&color=FFFFFF" alt="AI"
+                        style="width: 32px; height: 32px;">
+                </span>
+            </button>
+            <div id="ai-chat-window" class="ai-chat-window">
+                <div class="ai-chat-header">
+                    <h4>LUNNAR AI Asszisztens</h4>
+                    <button id="ai-chat-close" class="remove-img-btn"
+                        style="background-color: #fff; color: #000;">&times;</button>
+                </div>
+
+                <div id="ai-chat-messages" class="ai-chat-messages">
+                    <div class="message ai-message">
+                        Szia! Milyen autót keresel ma? Írd le nyugodtan saját szavaiddal (pl: "Keresek egy benzines
+                        kombit 3 millióig").
+                    </div>
+                </div>
+                <div class="ai-chat-input-area">
+                    <input type="text" id="ai-chat-input" placeholder="Küldj egy üzenetet..." class="profile-input">
+                    <button id="ai-chat-send" class="cta-button primary" title="Küldés">
+                        <span style="transform: translateX(1px); display: inline-block;">➤</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== FOOTER ===== -->
+        <footer>
+            <div class="footer-top">
+                <div class="footer-col">
+                    <a href="#home" style="text-decoration:none; color:inherit;">
+                        <div class="footer-logo">
+                            <img src="feher logo (1).png" alt="Lunnar" style="height:28px;">
+                            <span>LUNNAR</span>
+                        </div>
+                    </a>
+                    <p class="footer-desc">Magyarország legfejlettebb használtautó keresője. Prémium
+                        hirdetések.</p>
+                </div>
+                <div class="footer-col">
+                    <h4>NAVIGÁCIÓ</h4>
+                    <a href="#hero">Keresés</a>
+                    <a href="#brands">Márkák</a>
+                    <a href="#listings">Hirdetések</a>
+                    <a href="#how-it-works">Hogyan működik</a>
+                </div>
+                <div class="footer-col">
+                    <h4>INFORMÁCIÓ</h4>
+                    <a href="#">Rólunk</a>
+                    <a href="#">ÁSZF</a>
+                    <a href="#">Adatvédelem</a>
+                    <a href="#">Kapcsolat</a>
+                </div>
+                <div class="footer-col">
+                    <h4>KAPCSOLAT</h4>
+                    <p>📧 info@lunnar.hu</p>
+                    <p>📞 +36 30 542 3798</p>
+                    <p>📍 Fábiánháza, Magyarország</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 LUNNAR. Minden jog fenntartva.</p>
+                <div class="footer-links">
+                    <a href="#">Instagram</a>
+                    <a href="#">Facebook</a>
+                    <a href="#">Twitter</a>
+                </div>
+            </div>
+        </footer>
+
+        <!-- ===== SIDEBAR SEARCH PANEL ===== -->
+        <div id="sidebar-search" class="sidebar-search">
+            <div class="sidebar-search-header">
+                <h3> GYORSKERESÉS</h3>
+                <button id="sidebar-search-close" class="sidebar-close-btn">&times;</button>
+            </div>
+            <div class="sidebar-search-body">
+                <div class="sidebar-input-group">
+                    <label>Márka</label>
+                    <select id="sidebar-brand">
+                        <option value="">Összes márka</option>
+                    </select>
+                </div>
+                <div class="sidebar-input-group">
+                    <label>Modell</label>
+                    <select id="sidebar-model" disabled>
+                        <option value="">Előbb válassz márkát</option>
+                    </select>
+                </div>
+                <div class="sidebar-input-group">
+                    <label>Üzemanyag</label>
+                    <select id="sidebar-fuel">
+                        <option value="">Összes</option>
+                        <option value="Benzin">Benzin</option>
+                        <option value="Dízel">Dízel</option>
+                        <option value="Elektromos">Elektromos</option>
+                        <option value="Hibrid">Hibrid</option>
+                        <option value="LPG">LPG</option>
+                    </select>
+                </div>
+                <div class="sidebar-input-group">
+                    <label>Ár (Ft)</label>
+                    <div class="sidebar-dual">
+                        <input type="number" id="sidebar-price-from" placeholder="Tól">
+                        <input type="number" id="sidebar-price-to" placeholder="Ig">
+                    </div>
+                </div>
+                <div class="sidebar-input-group">
+                    <label>Évjárat</label>
+                    <div class="sidebar-dual">
+                        <input type="number" id="sidebar-year-from" placeholder="Ettől" min="1990" max="2026">
+                        <input type="number" id="sidebar-year-to" placeholder="Eddig" min="1990" max="2026">
+                    </div>
+                </div>
+                <div class="sidebar-input-group">
+                    <label>Kilométer</label>
+                    <div class="sidebar-dual">
+                        <input type="number" id="sidebar-km-from" placeholder="Tól">
+                        <input type="number" id="sidebar-km-to" placeholder="Ig">
+                    </div>
+                </div>
+                <div class="sidebar-input-group">
+                    <label>Távolság (Körzet)</label>
+                    <div class="sidebar-dual">
+                        <div style="position:relative; flex:1; display:flex;">
+                            <input type="text" id="sidebar-city" placeholder="Város (pl. Bp)"
+                                style="flex:1; padding-right: 35px;">
+                            <button type="button" id="sidebar-geo-btn" class="geo-btn"
+                                title="Jelenlegi helyzet">📍</button>
+                        </div>
+                        <select id="sidebar-distance" style="width: 80px;">
+                            <option value="">+0 km</option>
+                            <option value="20">+20 km</option>
+                            <option value="50">+50 km</option>
+                            <option value="100">+100 km</option>
+                            <option value="200">+200 km</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="sidebar-search-btn" id="sidebar-search-submit"><img
+                        src="https://img.icons8.com/?size=100&id=N0MB26bObOeS&format=png&color=000000" alt="Search Icon"
+                        style="width: 14px; height: 14px;"> Keresés</button>
+                <button class="sidebar-reset-btn" id="sidebar-search-reset">Szűrők törlése</button>
+            </div>
+        </div>
+
+        <!-- ===== TOAST NOTIFICATIONS ===== -->
+        <div class="toast-container" id="toast-container"></div>
+
+        <!-- Floating Sell Button for Mobile -->
+        <div class="mobile-fab" id="mobile-fab-btn" title="Hirdetés feladása">
+            <span class="icon">＋</span>
+        </div>
+
+        <!-- Scripts -->
+        <script src="main.js"></script>
+</body>
+
+</html>

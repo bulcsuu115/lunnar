@@ -2099,7 +2099,7 @@ async function deleteAd(id) {
 }
 
 // ===== ADMIN CONFIG =====
-const ADMIN_EMAIL = 'admin@lunnar.hu'; // CSAK ezzel az email címmel lehet admin belépést kezdeményezni
+const ADMIN_EMAIL = 'bubuproaa11@gmail.com'; // Ezzel az email címmel lehet admin belépést kezdeményezni
 const ADMIN_HASH = 'lh_15l1om_bGV2aTEyMw=='; // A 'levi123' jelszó titkosított formája
 
 function toggleAdmin() {

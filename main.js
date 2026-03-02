@@ -2444,6 +2444,7 @@ function initAuth() {
         // Code matches – save user to BACKEND
         const userData = pending.userData;
 
+        console.log('[AUTH] Regisztrációs adatok küldése a szervernek...', userData.email);
         fetch(`${API_BASE_URL}/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -2451,6 +2452,7 @@ function initAuth() {
         })
             .then(res => res.json())
             .then(data => {
+                console.log('[AUTH] Szerver válasz:', data);
                 delete pendingVerifications[emailDisplay];
                 verifyModal.classList.remove('active');
                 document.body.style.overflow = '';

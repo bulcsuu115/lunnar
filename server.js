@@ -79,11 +79,14 @@ const authenticateToken = (req, res, next) => {
 app.post('/api/auth/register', async (req, res) => {
     try {
         const { username, email, password } = req.body;
+        console.log(`[AUTH] Regisztrációs kísérlet: ${username} (${email})`);
         const hashedPassword = await bcrypt.hash(password, 10);
         const user = new User({ username, email, password: hashedPassword });
         await user.save();
+        console.log(`[AUTH] Sikeres regisztráció: ${username}`);
         res.status(201).json({ message: 'Sikeres regisztráció!' });
     } catch (err) {
+        console.error('[AUTH] Regisztrációs hiba:', err.message);
         res.status(400).json({ message: 'Regisztrációs hiba: lehet, hogy az email vagy felhasználónév már foglalt.' });
     }
 });

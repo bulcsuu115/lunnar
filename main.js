@@ -3161,14 +3161,21 @@ function initAiChat() {
         const text = input.value.trim();
         if (!text) return;
 
-        // Add user message
-        appendMessage(text, 'user-message');
+        appendMessage(text, 'user-message', false);
         input.value = '';
 
-        // Process message and reply
+        // Show typing indicator
+        const typing = document.createElement('div');
+        typing.className = 'message ai-message ai-typing';
+        typing.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
+        messages.appendChild(typing);
+        messages.scrollTop = messages.scrollHeight;
+
+        // Process with slight delay for natural feel
         setTimeout(() => {
+            if (typing.parentElement) typing.remove();
             processChatQuery(text);
-        }, 600);
+        }, 400 + Math.random() * 400);
     };
 
     sendBtn.addEventListener('click', sendMessage);
@@ -3176,168 +3183,31 @@ function initAiChat() {
         if (e.key === 'Enter') sendMessage();
     });
 
-    function appendMessage(text, className) {
+    function appendMessage(text, className, isHtml = true) {
         const msg = document.createElement('div');
         msg.className = `message ${className}`;
-        msg.textContent = text;
+        if (isHtml) {
+            // Convert \n to <br> and allow safe HTML
+            msg.innerHTML = text.replace(/\n/g, '<br>');
+        } else {
+            msg.textContent = text;
+        }
         messages.appendChild(msg);
         messages.scrollTop = messages.scrollHeight;
     }
 
-    const GEMINI_KEYS = [
-        "AIzaSyBvS4ko4uteFNrxb_-6mmahALjAjsAOfqs",
-        "AIzaSyBaps529C1VUHT84h9oHRasLOgaKYQZo78",
-        "AIzaSyC6DxX3oenxLlT-Oft9NPx1TmM3uYgvz1s",
-        "AIzaSyBKFVuGpZdkNUktn99kCY2IEx7diu7HdUA",
-        "AIzaSyAItjpQdQ9R8aHZ2z5OPgKUCurOindK3Qw",
-        "AIzaSyCNhDxLf-Mm6FtMmCweWu8TN3VX0kktCYE",
-        "AIzaSyCZ376uhAzfuAo6JPG8kpV8rvDNEN6GRQU",
-        "AIzaSyDqjgSpVok_3DAO9zE_DA0ZJx6HmDnhd48"
-    ];
-    let currentKeyIndex = parseInt(localStorage.getItem('lunnarAiKeyIndex')) || 0;
-    if (currentKeyIndex >= GEMINI_KEYS.length) currentKeyIndex = 0;
+    function processChatQuery(text) {
+        // Use LUNNAR_AI engine
+        const result = LUNNAR_AI.generateResponse(text);
 
-    async function processChatQuery(text) {
-        appendMessage("Gondolkodik...", "ai-message");
-        const statusMsg = messages.lastElementChild;
-
-        // Try Gemini first for intelligent response
-        const geminiResult = await tryGeminiAI(text);
-
-        if (statusMsg) statusMsg.remove();
-
-        if (geminiResult) {
-            if (geminiResult.filters && Object.values(geminiResult.filters).some(v => v !== null && v !== undefined)) {
-                applyDetectedFilters(geminiResult.filters);
-            }
-            appendMessage(geminiResult.reply, 'ai-message');
+        if (result.filters && result.filters.hasFilters) {
+            const { hasFilters, ...cleanFilters } = result.filters;
+            applyDetectedFilters(cleanFilters);
+            // Add result count after filters applied
+            const count = typeof filteredCars !== 'undefined' ? filteredCars.length : '?';
+            appendMessage(result.reply + `<br>📊 <b>${count}</b> találat.`, 'ai-message', true);
         } else {
-            // Fallback to local SmartAssistant
-            localSmartAssistant(text);
-        }
-    }
-
-    // Conversation history for context-aware AI
-    let conversationHistory = [];
-    const MAX_HISTORY = 20;
-
-    // ===== GEMINI API CALL =====
-    async function callGemini(systemPrompt, userMessage) {
-        const maxRetries = GEMINI_KEYS.length;
-        let lastError = null;
-
-        for (let attempt = 0; attempt < maxRetries; attempt++) {
-            const key = GEMINI_KEYS[currentKeyIndex];
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`;
-
-            try {
-                const res = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        systemInstruction: { parts: [{ text: systemPrompt }] },
-                        contents: conversationHistory.concat([
-                            { role: 'user', parts: [{ text: userMessage }] }
-                        ]),
-                        generationConfig: {
-                            temperature: 0.7,
-                            maxOutputTokens: 1024
-                        }
-                    })
-                });
-
-                if (res.ok) {
-                    const data = await res.json();
-                    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-                    if (reply) {
-                        conversationHistory.push({ role: 'user', parts: [{ text: userMessage }] });
-                        conversationHistory.push({ role: 'model', parts: [{ text: reply }] });
-                        if (conversationHistory.length > MAX_HISTORY * 2) {
-                            conversationHistory = conversationHistory.slice(-MAX_HISTORY * 2);
-                        }
-                        return reply;
-                    }
-                }
-
-                lastError = `HTTP ${res.status}`;
-                currentKeyIndex = (currentKeyIndex + 1) % GEMINI_KEYS.length;
-                localStorage.setItem('lunnarAiKeyIndex', currentKeyIndex);
-            } catch (err) {
-                lastError = err.message;
-                currentKeyIndex = (currentKeyIndex + 1) % GEMINI_KEYS.length;
-                localStorage.setItem('lunnarAiKeyIndex', currentKeyIndex);
-            }
-        }
-        console.warn('All Gemini keys exhausted, last error:', lastError);
-        return null;
-    }
-
-    // ===== GEMINI-POWERED AI =====
-    async function tryGeminiAI(text) {
-        const availableBrands = Object.keys(BRANDS_DATA).join(', ');
-        const currentListingCount = allCars.length;
-
-        const systemPrompt = `Te vagy a LUNNAR AI Asszisztens, egy pr\u00e9mium magyar haszn\u00e1ltaut\u00f3-keres\u0151 platform mesters\u00e9ges intelligencia asszisztense.
-
-SZEM\u00c9LYIS\u00c9GED:
-- Bar\u00e1ts\u00e1gos, professzion\u00e1lis, de k\u00f6zvetlen. Tegez\u0151dsz a felhaszn\u00e1l\u00f3val.
-- Aut\u00f3s szak\u00e9rt\u0151 vagy: \u00e9rtesz a m\u00e1rk\u00e1khoz, modellekhez, megb\u00edzhat\u00f3s\u00e1ghoz, fenntart\u00e1si k\u00f6lts\u00e9gekhez, \u00e9rt\u00e9kbecsl\u00e9sekhez.
-- Mindig magyarul v\u00e1laszolj, max 2-4 mondatban. Legy\u00e9l t\u00f6m\u00f6r, informat\u00edv \u00e9s hasznos.
-- Ha aut\u00f3r\u00f3l k\u00e9rdeznek, adj szak\u00e9rt\u0151i v\u00e9lem\u00e9nyt, tan\u00e1csot, \u00f6sszehasonl\u00edt\u00e1st.
-- Ha NEM aut\u00f3s t\u00e9m\u00e1r\u00f3l k\u00e9rdeznek (pl. id\u0151j\u00e1r\u00e1s, matek, t\u00f6rt\u00e9nelem, tudom\u00e1ny, vicc, b\u00e1rmi), SZINT\u00c9N v\u00e1laszolj kedvesen \u00e9s informat\u00edvan! B\u00e1rmilyen t\u00e9m\u00e1r\u00f3l tudsz besz\u00e9lgetni.
-
-K\u00c9PESS\u00c9GEID:
-1. AUT\u00d3KERES\u00c9S: Ha a felhaszn\u00e1l\u00f3 aut\u00f3t keres, filtereket adsz vissza + sz\u00f6veges v\u00e1laszt.
-2. \u00c1LTAL\u00c1NOS TUD\u00c1S: V\u00e1laszolj B\u00c1RMILYEN k\u00e9rd\u00e9sre (nem csak aut\u00f3s t\u00e9m\u00e1k \u2014 tudom\u00e1ny, kult\u00fara, sport, \u00e9telek, viccek, matematika, programoz\u00e1s, stb.)
-3. TAN\u00c1CSAD\u00c1S: Adj tan\u00e1csot aut\u00f3v\u00e1s\u00e1rl\u00e1shoz, fenntart\u00e1shoz, \u00f6sszehasonl\u00edt\u00e1shoz, biztos\u00edt\u00e1shoz.
-4. BESZ\u00c9LGET\u00c9S: L\u00e9gy bar\u00e1ts\u00e1gos, empatikus, humoros. V\u00e1laszolj \u00fcdv\u00f6zl\u00e9sekre, szem\u00e9lyes k\u00e9rd\u00e9sekre.
-5. SZ\u00c1MOL\u00c1S: Tudod kisz\u00e1molni a havi t\u00f6rleszt\u0151t, \u00fczemanyagk\u00f6lts\u00e9get, stb.
-
-HA AUT\u00d3KERES\u00c9SR\u0151L / SZ\u0170R\u00c9SR\u0150L VAN SZ\u00d3 (a felhaszn\u00e1l\u00f3 aut\u00f3t keres, sz\u0171rni akar), a v\u00e1laszod MINDIG ezzel a form\u00e1tummal kezd\u0151dj\u00f6n:
-|||FILTERS|||
-{"brand":"m\u00e1rkan\u00e9v vagy null","model":"modelln\u00e9v vagy null","fuel":"Benzin/D\u00edzel/Elektromos/Hibrid/LPG vagy null","priceTo":sz\u00e1m_vagy_null,"yearFrom":sz\u00e1m_vagy_null,"kmTo":sz\u00e1m_vagy_null,"transmission":"Manu\u00e1lis/Automata vagy null","bodyType":"Kisaut\u00f3/Limuzin/Kombi/SUV & Pick-up/Kup\u00e9/Kabri\u00f3let/Egyter\u0171/Transzporter vagy null","color":"Fekete/Feh\u00e9r/Ez\u00fcst/Sz\u00fcrke/K\u00e9k/Piros/Z\u00f6ld/S\u00e1rga/Barna vagy null"}
-|||END|||
-Majd ut\u00e1na \u00edrd a sz\u00f6veges v\u00e1laszt.
-
-HA NEM AUT\u00d3KERES\u00c9S (hanem k\u00e9rd\u00e9s, besz\u00e9lget\u00e9s, tan\u00e1cs, vicc, b\u00e1rmi m\u00e1s), NE adj FILTERS blokkot, csak v\u00e1laszolj term\u00e9szetesen.
-
-EL\u00c9RHET\u0150 M\u00c1RK\u00c1K: ${availableBrands}
-AKT\u00cdV HIRDET\u00c9SEK: ${currentListingCount}
-
-SZAB\u00c1LYOK:
-- priceTo: Ft-ban (5 milli\u00f3 = 5000000)
-- yearFrom: "ezut\u00e1n az \u00e9vj\u00e1rat ut\u00e1n" (2016 = 2016+)
-- kmTo: maximum futott kilom\u00e9ter
-- Csak akkor adj FILTERS blokkot, ha a felhaszn\u00e1l\u00f3 T\u00c9NYLEGESEN aut\u00f3t keres/sz\u0171rni akar
-- Ha az ember k\u00e9rdez (pl. "melyik a legmegb\u00edzhat\u00f3bb SUV?"), NE adj filtert, csak v\u00e1laszolj szak\u00e9rt\u0151k\u00e9nt
-- \u00c9rtsd a magyar szlenget is: "verd\u00e1k", "kocsi", "j\u00e1rg\u00e1ny" = aut\u00f3, "misi/milla" = milli\u00f3, stb.`;
-
-        try {
-            const reply = await callGemini(systemPrompt, text);
-            if (!reply) return null;
-
-            const filterMatch = reply.match(/\|\|\|FILTERS\|\|\|\s*(\{[\s\S]*?\})\s*\|\|\|END\|\|\|/);
-            let filters = null;
-            let cleanReply = reply;
-
-            if (filterMatch) {
-                try {
-                    filters = JSON.parse(filterMatch[1]);
-                    Object.keys(filters).forEach(k => {
-                        if (filters[k] === null || filters[k] === 'null' || filters[k] === '') {
-                            filters[k] = null;
-                        }
-                    });
-                } catch (e) {
-                    console.warn('Failed to parse Gemini filters:', e);
-                }
-                cleanReply = reply.replace(/\|\|\|FILTERS\|\|\|[\s\S]*?\|\|\|END\|\|\|/, '').trim();
-            }
-
-            return { reply: cleanReply, filters };
-        } catch (err) {
-            console.warn('Gemini AI failed:', err);
-            return null;
+            appendMessage(result.reply, 'ai-message', true);
         }
     }
 
@@ -3376,7 +3246,6 @@ SZAB\u00c1LYOK:
                 let exists = Array.from(ySel.options).some(o => o.value === String(filters.yearFrom));
                 if (!exists) {
                     const opt = new Option(String(filters.yearFrom), filters.yearFrom);
-                    // Insert in sorted order
                     let inserted = false;
                     for (let i = 1; i < ySel.options.length; i++) {
                         if (parseInt(ySel.options[i].value) < filters.yearFrom) {
@@ -3394,13 +3263,10 @@ SZAB\u00c1LYOK:
             const kmSel = document.getElementById('km-to');
             if (kmSel) {
                 let exists = Array.from(kmSel.options).some(o => o.value === String(filters.kmTo));
-                if (!exists) {
-                    kmSel.add(new Option(filters.kmTo.toLocaleString() + ' km', filters.kmTo));
-                }
+                if (!exists) kmSel.add(new Option(filters.kmTo.toLocaleString() + ' km', filters.kmTo));
                 kmSel.value = filters.kmTo;
             }
         }
-
         if (filters.priceTo) {
             const pSel = document.getElementById('price-to');
             if (pSel) {
@@ -3418,75 +3284,6 @@ SZAB\u00c1LYOK:
         document.getElementById('listings')?.scrollIntoView({ behavior: 'smooth' });
     }
 
-    // ===== LOCAL FALLBACK =====
-    function localSmartAssistant(text) {
-        const t = text.toLowerCase();
-        let filtersApplied = false;
-        let detected = { brand: null, model: null, fuel: null, priceTo: null, yearFrom: null, kmTo: null, transmission: null, bodyType: null, color: null };
-
-        // BRAND & MODEL
-        const sortedBrands = Object.keys(BRANDS_DATA).sort((a, b) => b.length - a.length);
-        const brandsMatch = sortedBrands.find(b => t.includes(b.toLowerCase()));
-        if (brandsMatch) {
-            detected.brand = brandsMatch; filtersApplied = true;
-            const sortedModels = [...BRANDS_DATA[brandsMatch].models].sort((a, b) => b.length - a.length);
-            const modelMatch = sortedModels.find(m => t.includes(m.toLowerCase()));
-            if (modelMatch) detected.model = modelMatch;
-        }
-
-        // YEAR
-        const yearPats = [/(?:\u00fajabb|fiatalabb|min(?:imum)?)\s*(?:mint\s*)?(20\d{2})/, /(20\d{2})\s*(?:ut\u00e1ni|f\u00f6l\u00f6tti|felett|t\u0151l)/, /(?:mint|legyen)\s*(20\d{2})/];
-        for (const p of yearPats) { const m = t.match(p); if (m) { detected.yearFrom = parseInt(m[1]); filtersApplied = true; break; } }
-
-        // KM
-        const kmPats = [/(?:max(?:imum)?|kevesebb|legfeljebb)\s*(\d+)\s*(?:ezer|e)?\s*km/, /(\d+)\s*(?:ezer|e)?\s*km\s*(?:alatt|ig)/];
-        for (const p of kmPats) { const m = t.match(p); if (m) { let v = parseInt(m[1]); if (v < 1000) v *= 1000; detected.kmTo = v; filtersApplied = true; break; } }
-
-        // PRICE
-        const pm = t.match(/(\d+)\s*(?:milli\u00f3|millio|milla|misi|m\b)/);
-        if (pm) { detected.priceTo = parseInt(pm[1]) * 1000000; filtersApplied = true; }
-        else { const rm = t.match(/(\d{6,})/); if (rm) { detected.priceTo = parseInt(rm[1]); filtersApplied = true; } }
-
-        // FUEL
-        const fuelMap = { 'Benzin': ['benzin'], 'D\u00edzel': ['d\u00edzel', 'dizel', 'g\u00e1zolaj'], 'Elektromos': ['elektromos', 'villany'], 'Hibrid': ['hibrid', 'hybrid'], 'LPG': ['lpg'] };
-        for (const [f, kw] of Object.entries(fuelMap)) { if (kw.some(k => t.includes(k))) { detected.fuel = f; filtersApplied = true; break; } }
-
-        // TRANSMISSION
-        if (/automata|dsg|tiptronic/.test(t)) { detected.transmission = 'Automata'; filtersApplied = true; }
-        else if (/manu\u00e1lis|manualis|k\u00e9zi|kezi/.test(t)) { detected.transmission = 'Manu\u00e1lis'; filtersApplied = true; }
-
-        // BODY
-        const bodyMap = { 'SUV & Pick-up': ['suv', 'terepj\u00e1r\u00f3', 'pickup'], 'Kombi': ['kombi'], 'Kup\u00e9': ['kup\u00e9', 'coupe'], 'Kabri\u00f3let': ['kabri\u00f3', 'cabrio'], 'Kisaut\u00f3': ['kisaut\u00f3', 'v\u00e1rosi'], 'Limuzin': ['limuzin', 'szed\u00e1n', 'sedan'], 'Egyter\u0171': ['egyter\u0171'], 'Transzporter': ['transzporter', 'furgon'] };
-        for (const [b, kw] of Object.entries(bodyMap)) { if (kw.some(k => t.includes(k))) { detected.bodyType = b; filtersApplied = true; break; } }
-
-        // COLOR
-        const colorMap = { 'Fekete': ['fekete'], 'Feh\u00e9r': ['feh\u00e9r', 'feher'], 'Ez\u00fcst': ['ez\u00fcst'], 'Sz\u00fcrke': ['sz\u00fcrke', 'szurke'], 'K\u00e9k': ['k\u00e9k', 'kek'], 'Piros': ['piros', 'v\u00f6r\u00f6s'], 'Z\u00f6ld': ['z\u00f6ld'], 'S\u00e1rga': ['s\u00e1rga'], 'Barna': ['barna'] };
-        for (const [c, kw] of Object.entries(colorMap)) { if (kw.some(k => t.includes(k))) { detected.color = c; filtersApplied = true; break; } }
-
-        if (filtersApplied) {
-            applyDetectedFilters(detected);
-            let parts = [];
-            if (detected.brand) parts.push(detected.brand + (detected.model ? ` ${detected.model}` : ''));
-            if (detected.yearFrom) parts.push(`${detected.yearFrom} ut\u00e1ni`);
-            if (detected.priceTo) parts.push(`${(detected.priceTo / 1000000).toFixed(0)}M Ft alatt`);
-            if (detected.kmTo) parts.push(`max ${detected.kmTo.toLocaleString()} km`);
-            if (detected.fuel) parts.push(detected.fuel);
-            if (detected.transmission) parts.push(detected.transmission);
-            if (detected.bodyType) parts.push(detected.bodyType);
-            if (detected.color) parts.push(detected.color);
-            appendMessage(`\u00c9rtettem! Sz\u0171rtem: ${parts.join(', ')}. ${filteredCars.length} tal\u00e1lat.`, 'ai-message');
-        } else {
-            const greetings = ['szia', 'hello', '\u00fcdv', 'hell\u00f3', 'hi', 'hali', 'szevasz'];
-            if (greetings.some(g => t.startsWith(g))) {
-                appendMessage('Szia! \ud83d\udc4b \u00c9n vagyok a LUNNAR AI. K\u00e9rdezz b\u00e1rmit, vagy \u00edrd le milyen aut\u00f3t keresel!', 'ai-message');
-            } else if (/mit tudsz|miben seg\u00edt|hogyan|help/.test(t)) {
-                appendMessage('\ud83d\udd0d Aut\u00f3keres\u00e9s (m\u00e1rka, \u00e1r, \u00e9vjat, km, v\u00e1lt\u00f3)\n\ud83d\udca1 Aut\u00f3s tan\u00e1csad\u00e1s\n\ud83d\udcac B\u00e1rmilyen k\u00e9rd\u00e9s\n\nPr\u00f3b\u00e1ld: "d\u00edzel kombi 2018 ut\u00e1nr\u00f3l max 150e km"', 'ai-message');
-            } else {
-                appendMessage('Nem teljesen \u00e9rtettem. Pr\u00f3b\u00e1ld meg konkr\u00e9tabban, pl:\n\u2022 "BMW 328 5 milli\u00f3 alatt"\n\u2022 "automata SUV 2020 ut\u00e1ni"\n\u2022 "melyik a legjobb csal\u00e1di aut\u00f3?"', 'ai-message');
-            }
-        }
-    }
-
     function resetMainFilters() {
         const form = document.getElementById('car-search-form');
         if (form) {
@@ -3498,10 +3295,226 @@ SZAB\u00c1LYOK:
         const modelSelect = document.getElementById('model-select');
         if (modelSelect) {
             modelSelect.disabled = true;
-            modelSelect.innerHTML = '<option value="">El\u0151bb v\u00e1lassz m\u00e1rk\u00e1t</option>';
+            modelSelect.innerHTML = '<option value="">Előbb válassz márkát</option>';
             if (modelSelect._customSelect) modelSelect._customSelect.rebuild();
         }
     }
+}
+
+2. \u00c1LTAL\u00c1NOS TUD\u00c1S: V\u00e1laszolj B\u00c1RMILYEN k\u00e9rd\u00e9sre(nem csak aut\u00f3s t\u00e9m\u00e1k \u2014 tudom\u00e1ny, kult\u00fara, sport, \u00e9telek, viccek, matematika, programoz\u00e1s, stb.)
+3. TAN\u00c1CSAD\u00c1S: Adj tan\u00e1csot aut\u00f3v\u00e1s\u00e1rl\u00e1shoz, fenntart\u00e1shoz, \u00f6sszehasonl\u00edt\u00e1shoz, biztos\u00edt\u00e1shoz.
+4. BESZ\u00c9LGET\u00c9S: L\u00e9gy bar\u00e1ts\u00e1gos, empatikus, humoros.V\u00e1laszolj \u00fcdv\u00f6zl\u00e9sekre, szem\u00e9lyes k\u00e9rd\u00e9sekre.
+5. SZ\u00c1MOL\u00c1S: Tudod kisz\u00e1molni a havi t\u00f6rleszt\u0151t, \u00fczemanyagk\u00f6lts\u00e9get, stb.
+
+HA AUT\u00d3KERES\u00c9SR\u0151L / SZ\u0170R\u00c9SR\u0150L VAN SZ\u00d3(a felhaszn\u00e1l\u00f3 aut\u00f3t keres, sz\u0171rni akar), a v\u00e1laszod MINDIG ezzel a form\u00e1tummal kezd\u0151dj\u00f6n:
+||| FILTERS |||
+    { "brand": "m\u00e1rkan\u00e9v vagy null", "model": "modelln\u00e9v vagy null", "fuel": "Benzin/D\u00edzel/Elektromos/Hibrid/LPG vagy null", "priceTo": sz\u00e1m_vagy_null, "yearFrom": sz\u00e1m_vagy_null, "kmTo": sz\u00e1m_vagy_null, "transmission": "Manu\u00e1lis/Automata vagy null", "bodyType": "Kisaut\u00f3/Limuzin/Kombi/SUV & Pick-up/Kup\u00e9/Kabri\u00f3let/Egyter\u0171/Transzporter vagy null", "color": "Fekete/Feh\u00e9r/Ez\u00fcst/Sz\u00fcrke/K\u00e9k/Piros/Z\u00f6ld/S\u00e1rga/Barna vagy null" }
+    ||| END |||
+    Majd ut\u00e1na \u00edrd a sz\u00f6veges v\u00e1laszt.
+
+HA NEM AUT\u00d3KERES\u00c9S(hanem k\u00e9rd\u00e9s, besz\u00e9lget\u00e9s, tan\u00e1cs, vicc, b\u00e1rmi m\u00e1s), NE adj FILTERS blokkot, csak v\u00e1laszolj term\u00e9szetesen.
+
+EL\u00c9RHET\u0150 M\u00c1RK\u00c1K: ${ availableBrands }
+AKT\u00cdV HIRDET\u00c9SEK: ${ currentListingCount }
+
+SZAB\u00c1LYOK:
+- priceTo: Ft - ban(5 milli\u00f3 = 5000000)
+    - yearFrom: "ezut\u00e1n az \u00e9vj\u00e1rat ut\u00e1n"(2016 = 2016 +)
+        - kmTo: maximum futott kilom\u00e9ter
+            - Csak akkor adj FILTERS blokkot, ha a felhaszn\u00e1l\u00f3 T\u00c9NYLEGESEN aut\u00f3t keres / sz\u0171rni akar
+                - Ha az ember k\u00e9rdez(pl. "melyik a legmegb\u00edzhat\u00f3bb SUV?"), NE adj filtert, csak v\u00e1laszolj szak\u00e9rt\u0151k\u00e9nt
+                    - \u00c9rtsd a magyar szlenget is: "verd\u00e1k", "kocsi", "j\u00e1rg\u00e1ny" = aut\u00f3, "misi/milla" = milli\u00f3, stb.`;
+
+    try {
+        const reply = await callGemini(systemPrompt, text);
+        if (!reply) return null;
+
+        const filterMatch = reply.match(/\|\|\|FILTERS\|\|\|\s*(\{[\s\S]*?\})\s*\|\|\|END\|\|\|/);
+        let filters = null;
+        let cleanReply = reply;
+
+        if (filterMatch) {
+            try {
+                filters = JSON.parse(filterMatch[1]);
+                Object.keys(filters).forEach(k => {
+                    if (filters[k] === null || filters[k] === 'null' || filters[k] === '') {
+                        filters[k] = null;
+                    }
+                });
+            } catch (e) {
+                console.warn('Failed to parse Gemini filters:', e);
+            }
+            cleanReply = reply.replace(/\|\|\|FILTERS\|\|\|[\s\S]*?\|\|\|END\|\|\|/, '').trim();
+        }
+
+        return { reply: cleanReply, filters };
+    } catch (err) {
+        console.warn('Gemini AI failed:', err);
+        return null;
+    }
+}
+
+// ===== APPLY FILTERS FROM AI =====
+function applyDetectedFilters(filters) {
+    resetMainFilters();
+
+    if (filters.brand) {
+        const bSel = document.getElementById('brand-select');
+        const exactBrand = Object.keys(BRANDS_DATA).find(b => b.toLowerCase() === filters.brand.toLowerCase());
+        if (exactBrand) {
+            bSel.value = exactBrand;
+            bSel.dispatchEvent(new Event('change'));
+            if (filters.model) {
+                setTimeout(() => {
+                    const mSel = document.getElementById('model-select');
+                    const models = BRANDS_DATA[exactBrand]?.models || [];
+                    const exactModel = models.find(m => m.toLowerCase() === filters.model.toLowerCase());
+                    if (exactModel) {
+                        mSel.value = exactModel;
+                        if (mSel._customSelect) mSel._customSelect.rebuild();
+                    }
+                    filterCars();
+                }, 150);
+            }
+        }
+    }
+
+    if (filters.fuel) { const s = document.getElementById('fuel-select'); if (s) s.value = filters.fuel; }
+    if (filters.transmission) { const s = document.getElementById('transmission-select'); if (s) s.value = filters.transmission; }
+    if (filters.bodyType) { const s = document.getElementById('body-select'); if (s) s.value = filters.bodyType; }
+    if (filters.color) { const s = document.getElementById('color-select'); if (s) s.value = filters.color; }
+    if (filters.yearFrom) {
+        const ySel = document.getElementById('year-from');
+        if (ySel) {
+            let exists = Array.from(ySel.options).some(o => o.value === String(filters.yearFrom));
+            if (!exists) {
+                const opt = new Option(String(filters.yearFrom), filters.yearFrom);
+                // Insert in sorted order
+                let inserted = false;
+                for (let i = 1; i < ySel.options.length; i++) {
+                    if (parseInt(ySel.options[i].value) < filters.yearFrom) {
+                        ySel.insertBefore(opt, ySel.options[i]);
+                        inserted = true;
+                        break;
+                    }
+                }
+                if (!inserted) ySel.add(opt);
+            }
+            ySel.value = filters.yearFrom;
+        }
+    }
+    if (filters.kmTo) {
+        const kmSel = document.getElementById('km-to');
+        if (kmSel) {
+            let exists = Array.from(kmSel.options).some(o => o.value === String(filters.kmTo));
+            if (!exists) {
+                kmSel.add(new Option(filters.kmTo.toLocaleString() + ' km', filters.kmTo));
+            }
+            kmSel.value = filters.kmTo;
+        }
+    }
+
+    if (filters.priceTo) {
+        const pSel = document.getElementById('price-to');
+        if (pSel) {
+            let exists = Array.from(pSel.options).some(o => parseInt(o.value) === filters.priceTo);
+            if (!exists) pSel.add(new Option(formatPrice(filters.priceTo), filters.priceTo));
+            pSel.value = filters.priceTo;
+        }
+    }
+
+    document.querySelectorAll('#car-search-form select').forEach(s => {
+        if (s._customSelect) s._customSelect.rebuild();
+    });
+
+    filterCars();
+    document.getElementById('listings')?.scrollIntoView({ behavior: 'smooth' });
+}
+
+// ===== LOCAL FALLBACK =====
+function localSmartAssistant(text) {
+    const t = text.toLowerCase();
+    let filtersApplied = false;
+    let detected = { brand: null, model: null, fuel: null, priceTo: null, yearFrom: null, kmTo: null, transmission: null, bodyType: null, color: null };
+
+    // BRAND & MODEL
+    const sortedBrands = Object.keys(BRANDS_DATA).sort((a, b) => b.length - a.length);
+    const brandsMatch = sortedBrands.find(b => t.includes(b.toLowerCase()));
+    if (brandsMatch) {
+        detected.brand = brandsMatch; filtersApplied = true;
+        const sortedModels = [...BRANDS_DATA[brandsMatch].models].sort((a, b) => b.length - a.length);
+        const modelMatch = sortedModels.find(m => t.includes(m.toLowerCase()));
+        if (modelMatch) detected.model = modelMatch;
+    }
+
+    // YEAR
+    const yearPats = [/(?:\u00fajabb|fiatalabb|min(?:imum)?)\s*(?:mint\s*)?(20\d{2})/, /(20\d{2})\s*(?:ut\u00e1ni|f\u00f6l\u00f6tti|felett|t\u0151l)/, /(?:mint|legyen)\s*(20\d{2})/];
+    for (const p of yearPats) { const m = t.match(p); if (m) { detected.yearFrom = parseInt(m[1]); filtersApplied = true; break; } }
+
+    // KM
+    const kmPats = [/(?:max(?:imum)?|kevesebb|legfeljebb)\s*(\d+)\s*(?:ezer|e)?\s*km/, /(\d+)\s*(?:ezer|e)?\s*km\s*(?:alatt|ig)/];
+    for (const p of kmPats) { const m = t.match(p); if (m) { let v = parseInt(m[1]); if (v < 1000) v *= 1000; detected.kmTo = v; filtersApplied = true; break; } }
+
+    // PRICE
+    const pm = t.match(/(\d+)\s*(?:milli\u00f3|millio|milla|misi|m\b)/);
+    if (pm) { detected.priceTo = parseInt(pm[1]) * 1000000; filtersApplied = true; }
+    else { const rm = t.match(/(\d{6,})/); if (rm) { detected.priceTo = parseInt(rm[1]); filtersApplied = true; } }
+
+    // FUEL
+    const fuelMap = { 'Benzin': ['benzin'], 'D\u00edzel': ['d\u00edzel', 'dizel', 'g\u00e1zolaj'], 'Elektromos': ['elektromos', 'villany'], 'Hibrid': ['hibrid', 'hybrid'], 'LPG': ['lpg'] };
+    for (const [f, kw] of Object.entries(fuelMap)) { if (kw.some(k => t.includes(k))) { detected.fuel = f; filtersApplied = true; break; } }
+
+    // TRANSMISSION
+    if (/automata|dsg|tiptronic/.test(t)) { detected.transmission = 'Automata'; filtersApplied = true; }
+    else if (/manu\u00e1lis|manualis|k\u00e9zi|kezi/.test(t)) { detected.transmission = 'Manu\u00e1lis'; filtersApplied = true; }
+
+    // BODY
+    const bodyMap = { 'SUV & Pick-up': ['suv', 'terepj\u00e1r\u00f3', 'pickup'], 'Kombi': ['kombi'], 'Kup\u00e9': ['kup\u00e9', 'coupe'], 'Kabri\u00f3let': ['kabri\u00f3', 'cabrio'], 'Kisaut\u00f3': ['kisaut\u00f3', 'v\u00e1rosi'], 'Limuzin': ['limuzin', 'szed\u00e1n', 'sedan'], 'Egyter\u0171': ['egyter\u0171'], 'Transzporter': ['transzporter', 'furgon'] };
+    for (const [b, kw] of Object.entries(bodyMap)) { if (kw.some(k => t.includes(k))) { detected.bodyType = b; filtersApplied = true; break; } }
+
+    // COLOR
+    const colorMap = { 'Fekete': ['fekete'], 'Feh\u00e9r': ['feh\u00e9r', 'feher'], 'Ez\u00fcst': ['ez\u00fcst'], 'Sz\u00fcrke': ['sz\u00fcrke', 'szurke'], 'K\u00e9k': ['k\u00e9k', 'kek'], 'Piros': ['piros', 'v\u00f6r\u00f6s'], 'Z\u00f6ld': ['z\u00f6ld'], 'S\u00e1rga': ['s\u00e1rga'], 'Barna': ['barna'] };
+    for (const [c, kw] of Object.entries(colorMap)) { if (kw.some(k => t.includes(k))) { detected.color = c; filtersApplied = true; break; } }
+
+    if (filtersApplied) {
+        applyDetectedFilters(detected);
+        let parts = [];
+        if (detected.brand) parts.push(detected.brand + (detected.model ? ` ${ detected.model } ` : ''));
+        if (detected.yearFrom) parts.push(`${ detected.yearFrom } ut\u00e1ni`);
+        if (detected.priceTo) parts.push(`${ (detected.priceTo / 1000000).toFixed(0) }M Ft alatt`);
+        if (detected.kmTo) parts.push(`max ${ detected.kmTo.toLocaleString() } km`);
+        if (detected.fuel) parts.push(detected.fuel);
+        if (detected.transmission) parts.push(detected.transmission);
+        if (detected.bodyType) parts.push(detected.bodyType);
+        if (detected.color) parts.push(detected.color);
+        appendMessage(`\u00c9rtettem! Sz\u0171rtem: ${ parts.join(', ') }. ${ filteredCars.length } tal\u00e1lat.`, 'ai-message');
+    } else {
+        const greetings = ['szia', 'hello', '\u00fcdv', 'hell\u00f3', 'hi', 'hali', 'szevasz'];
+        if (greetings.some(g => t.startsWith(g))) {
+            appendMessage('Szia! \ud83d\udc4b \u00c9n vagyok a LUNNAR AI. K\u00e9rdezz b\u00e1rmit, vagy \u00edrd le milyen aut\u00f3t keresel!', 'ai-message');
+        } else if (/mit tudsz|miben seg\u00edt|hogyan|help/.test(t)) {
+            appendMessage('\ud83d\udd0d Aut\u00f3keres\u00e9s (m\u00e1rka, \u00e1r, \u00e9vjat, km, v\u00e1lt\u00f3)\n\ud83d\udca1 Aut\u00f3s tan\u00e1csad\u00e1s\n\ud83d\udcac B\u00e1rmilyen k\u00e9rd\u00e9s\n\nPr\u00f3b\u00e1ld: "d\u00edzel kombi 2018 ut\u00e1nr\u00f3l max 150e km"', 'ai-message');
+        } else {
+            appendMessage('Nem teljesen \u00e9rtettem. Pr\u00f3b\u00e1ld meg konkr\u00e9tabban, pl:\n\u2022 "BMW 328 5 milli\u00f3 alatt"\n\u2022 "automata SUV 2020 ut\u00e1ni"\n\u2022 "melyik a legjobb csal\u00e1di aut\u00f3?"', 'ai-message');
+        }
+    }
+}
+
+function resetMainFilters() {
+    const form = document.getElementById('car-search-form');
+    if (form) {
+        form.reset();
+        form.querySelectorAll('select').forEach(sel => {
+            if (sel._customSelect) sel._customSelect.rebuild();
+        });
+    }
+    const modelSelect = document.getElementById('model-select');
+    if (modelSelect) {
+        modelSelect.disabled = true;
+        modelSelect.innerHTML = '<option value="">El\u0151bb v\u00e1lassz m\u00e1rk\u00e1t</option>';
+        if (modelSelect._customSelect) modelSelect._customSelect.rebuild();
+    }
+}
 }
 
 function requestUserLocation(isAuto = false) {

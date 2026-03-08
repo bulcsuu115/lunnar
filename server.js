@@ -56,7 +56,7 @@ const adSchema = new mongoose.Schema({
     images: [String],
     description: String,
     owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+    status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'approved' },
     createdAt: { type: Date, default: Date.now }
 });
 
@@ -118,7 +118,15 @@ app.get('/api/ads', async (req, res) => {
 // Create Ad (Auto-attach owner if logged in)
 app.post('/api/ads', async (req, res) => {
     try {
-        const adData = req.body;
+        console.log('[ADS] Új hirdetés beérkezés...');
+        const adData = { ...req.body };
+
+        // Remove fields that are not in the schema / could conflict with MongoDB
+        delete adData.id;
+        delete adData._id;
+        delete adData.ownerId;
+        delete adData.ownerEmail;
+
         // Check for token manually or just parse headers
         const authHeader = req.headers['authorization'];
         const token = authHeader && authHeader.split(' ')[1];
@@ -126,12 +134,22 @@ app.post('/api/ads', async (req, res) => {
             try {
                 const decoded = jwt.verify(token, jwtSecret);
                 adData.owner = decoded.userId;
-            } catch (e) { /* invalid token, submit as guest */ }
+                console.log(`[ADS] Owner beállítva: ${decoded.userId}`);
+            } catch (e) {
+                console.warn('[ADS] Érvénytelen token, vendégként mentjük');
+            }
         }
+
+        // Force status to approved for immediate visibility
+        adData.status = 'approved';
+
+        console.log(`[ADS] Mentés: ${adData.brand} ${adData.model}, ár: ${adData.price}, képek: ${(adData.images || []).length} db`);
         const ad = new Ad(adData);
         const newAd = await ad.save();
+        console.log(`[ADS] Sikeresen mentve! ID: ${newAd._id}`);
         res.status(201).json(newAd);
     } catch (err) {
+        console.error('[ADS] HIBA a mentés során:', err.message);
         res.status(400).json({ message: err.message });
     }
 });

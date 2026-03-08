@@ -1898,18 +1898,18 @@ function initSubmission() {
                 bodyType: subBody ? subBody.value : "",
                 condition: subCondition ? subCondition.value : "",
                 color: subColor ? subColor.value : "",
-                status: 'pending', // Requires admin approval before appearing on the site
-                ownerEmail: currentUser ? currentUser.email : '',
-                ownerId: currentUser ? currentUser.id : ''
+                status: 'approved'
             };
 
+            // Local ID only used for localStorage fallback
+            const localId = editingAdId || ('local-' + Date.now());
             if (editingAdId) {
-                adData.id = editingAdId;
                 adData.updatedAt = new Date().toISOString();
             } else {
-                adData.id = 'local-' + Date.now();
                 adData.createdAt = new Date().toISOString();
             }
+
+            console.log('[Submission] Hirdetés adatok:', adData.brand, adData.model, 'képek:', adData.images.length);
 
 
             let success = false;
@@ -1921,33 +1921,39 @@ function initSubmission() {
                 const method = editingAdId ? 'PATCH' : 'POST';
                 const url = editingAdId ? `${API_BASE_URL}/ads/${editingAdId}` : `${API_BASE_URL}/ads`;
 
+                console.log('[Submission] Küldés a szerverre:', method, url);
                 const res = await fetch(url, {
                     method: method,
                     headers: headers,
                     body: JSON.stringify(adData)
                 });
                 if (res.ok) {
+                    const savedAd = await res.json();
+                    console.log('[Submission] Sikeresen mentve a szerverre! ID:', savedAd._id);
                     success = true;
                 } else {
-                    console.warn('[Submission] Backend returned error:', res.status);
+                    const errData = await res.json().catch(() => ({}));
+                    console.error('[Submission] Backend hiba:', res.status, errData.message || '');
                 }
             } catch (err) {
-                console.warn('[Submission] Backend connection failed:', err.message);
+                console.warn('[Submission] Backend kapcsolódási hiba:', err.message);
             }
 
             // 2. Fallback to Local Storage
             if (!success) {
+                console.warn('[Submission] Szerverre mentés sikertelen, localStorage fallback...');
                 try {
+                    const localAdData = { ...adData, id: localId };
                     const localAds = JSON.parse(localStorage.getItem('lunnarLocalAds') || '[]');
                     if (editingAdId) {
                         const idx = localAds.findIndex(a => a.id === editingAdId || a._id === editingAdId);
                         if (idx !== -1) {
-                            localAds[idx] = { ...localAds[idx], ...adData };
+                            localAds[idx] = { ...localAds[idx], ...localAdData };
                         } else {
-                            localAds.push(adData);
+                            localAds.push(localAdData);
                         }
                     } else {
-                        localAds.push(adData);
+                        localAds.push(localAdData);
                     }
                     localStorage.setItem('lunnarLocalAds', JSON.stringify(localAds));
                     success = true;

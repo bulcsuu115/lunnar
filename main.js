@@ -44,7 +44,7 @@ class Star {
     }
     draw() {
         if (!starCtx) return;
-        const starColor = isLightMode ? `rgba(0, 0, 0, ${this.opacity * 0.5})` : `rgba(255, 255, 255, ${this.opacity})`;
+        const starColor = isLightMode ? `rgba(148, 163, 184, ${this.opacity * 0.15})` : `rgba(255, 255, 255, ${this.opacity})`;
 
         const x = (this.x - width / 2) * (width / this.z) + width / 2;
         const y = (this.y - height / 2) * (width / this.z) + height / 2;
@@ -1424,8 +1424,8 @@ function renderFavorites() {
 }
 
 // Custom render for any grid
-function renderCarsIn(cars, grid) {
-    grid.innerHTML = cars.map(car => renderCarCard(car, false)).join('');
+function renderCarsIn(cars, grid, isProfileView = false) {
+    grid.innerHTML = cars.map(car => renderCarCard(car, isProfileView)).join('');
 
     // Staggered fade-in (Standard)
     requestAnimationFrame(() => {
@@ -1898,7 +1898,10 @@ function initSubmission() {
                 bodyType: subBody ? subBody.value : "",
                 condition: subCondition ? subCondition.value : "",
                 color: subColor ? subColor.value : "",
-                status: 'approved'
+                status: 'approved',
+                ownerEmail: currentUser.email,
+                ownerId: currentUser.id,
+                seller: currentUser.username
             };
 
             // Local ID only used for localStorage fallback
@@ -2756,7 +2759,11 @@ async function renderProfile() {
     const myAds = localAds.filter(ad => ad.ownerEmail === currentUser.email || ad.ownerId === currentUser.id);
 
     const favsIds = JSON.parse(localStorage.getItem('lunnarFavorites') || '[]');
-    const favsActive = allCars.filter(c => favsIds.includes(c.id) || favsIds.includes(c._id));
+    const favsActive = allCars.filter(c => {
+        const idStr = c.id ? c.id.toString() : '';
+        const _idStr = c._id ? c._id.toString() : '';
+        return favsIds.includes(idStr) || favsIds.includes(_idStr);
+    });
 
     const adsCountEl = document.getElementById('stat-ads-count');
     const favsCountEl = document.getElementById('stat-favs-count');
@@ -2809,14 +2816,18 @@ function renderProfileFavorites() {
     if (!grid) return;
 
     const favIds = JSON.parse(localStorage.getItem('lunnarFavorites') || '[]');
-    const favCars = allCars.filter(c => favIds.includes(c.id) || favIds.includes(c._id));
+    const favCars = allCars.filter(c => {
+        const idStr = c.id ? c.id.toString() : '';
+        const _idStr = c._id ? c._id.toString() : '';
+        return favIds.includes(idStr) || favIds.includes(_idStr);
+    });
 
     if (favCars.length === 0) {
         grid.innerHTML = '<div class="placeholder">NINCSENEK MÉG KEDVENCEID</div>';
         return;
     }
 
-    grid.innerHTML = favCars.map(car => renderCarCard(car)).join('');
+    renderCarsIn(favCars, grid, false);
 }
 
 async function fetchMyAds(searchQuery = '') {
@@ -2833,10 +2844,21 @@ async function fetchMyAds(searchQuery = '') {
         });
         if (res.ok) ads = await res.json();
     } catch (err) {
-        console.warn('Hiba a hirdetések lekérésekor a szerverről, fallback a lokálisra');
-        const localAds = JSON.parse(localStorage.getItem('lunnarLocalAds') || '[]');
-        ads = localAds.filter(ad => ad.ownerEmail === currentUser.email || ad.ownerId === currentUser.id);
+        console.warn('Hiba a hirdetések lekérésekor a szerverről');
     }
+
+    const localAds = JSON.parse(localStorage.getItem('lunnarLocalAds') || '[]');
+    const userLocalAds = localAds.filter(ad => ad.ownerEmail === currentUser.email || ad.ownerId === currentUser.id);
+
+    // Merge: Server ads + local ads (filter out duplicates if they exist by ID)
+    const combinedAds = [...ads];
+    userLocalAds.forEach(local => {
+        if (!combinedAds.find(s => s._id === local.id || s.id === local.id)) {
+            combinedAds.push(local);
+        }
+    });
+
+    ads = combinedAds;
 
     if (searchQuery) {
         const query = searchQuery.toLowerCase();
@@ -2854,7 +2876,7 @@ async function fetchMyAds(searchQuery = '') {
         return;
     }
 
-    grid.innerHTML = ads.map(ad => renderCarCard(ad, true)).join('');
+    renderCarsIn(ads, grid, true);
 }
 
 function renderCarCard(car, isProfileView = false) {

@@ -5381,7 +5381,6 @@ body.light-mode .admin-btn.reject {
     /* --- SIDEBAR SEARCH --- */
     .sidebar-search {
         width: 100%;
-        left: -100%;
     }
 
     /* --- TOAST --- */

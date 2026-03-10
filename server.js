@@ -20,6 +20,11 @@ app.get('/', (req, res) => {
     res.sendFile(__dirname + '/index.html');
 });
 
+// Health check endpoint for cron jobs (heartbeat)
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok' });
+});
+
 // MongoDB Connection
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/lunnar';
 mongoose.connect(MONGODB_URI)

@@ -100,19 +100,6 @@
                     <p class="subtitle" id="hero-subtitle"></p>
 
                     <div class="search-container">
-                        <div id="quick-saved-searches-container" class="glass-premium"
-                            style="display:none; margin-bottom:1.5rem; padding:12px; border-radius:12px; border:1px solid rgba(255,255,255,0.05);">
-                            <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-                                <span class="icon" style="font-size:1.2rem;">📂</span>
-                                <span
-                                    style="font-size:0.85rem; font-weight:bold; letter-spacing:1px; opacity:0.8;">GYORSBETÖLTÉS</span>
-                            </div>
-                            <select id="quick-saved-searches"
-                                onchange="if(this.value) loadSavedSearch(JSON.parse(this.value))"
-                                style="width:100%; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); padding:8px 12px; border-radius:6px; color:var(--text-color); cursor:pointer; font-size:0.9rem;">
-                                <option value="">-- Válassz egy mentett keresést --</option>
-                            </select>
-                        </div>
                         <form id="car-search-form">
                             <div class="search-grid">
                                 <div class="input-group">
@@ -142,7 +129,7 @@
                                     <label>Évjárat</label>
                                     <div class="dual-input">
                                         <select id="year-from">
-                                            <option value="">Kora (tól)</option>
+                                            <option value="">Évjárat (tól)</option>
                                             <option value="2026">2026</option>
                                             <option value="2025">2025</option>
                                             <option value="2024">2024</option>
@@ -163,7 +150,7 @@
                                             <option value="1990">1990</option>
                                         </select>
                                         <select id="year-to">
-                                            <option value="">Kora (ig)</option>
+                                            <option value="">Évjárat (ig)</option>
                                             <option value="2026">2026</option>
                                             <option value="2025">2025</option>
                                             <option value="2024">2024</option>
@@ -286,6 +273,14 @@
                                             <option value="Zöld">Zöld</option>
                                             <option value="Sárga">Sárga</option>
                                             <option value="Barna">Barna</option>
+                                            <option value="Bézs">Bézs</option>
+                                            <option value="Arany">Arany</option>
+                                            <option value="Bordó">Bordó</option>
+                                            <option value="Lila">Lila</option>
+                                            <option value="Narancs">Narancs</option>
+                                            <option value="Rózsaszín">Rózsaszín</option>
+                                            <option value="Pezsgő">Pezsgő</option>
+                                            <option value="Bronz">Bronz</option>
                                         </select>
                                     </div>
                                     <div class="input-group">
@@ -300,12 +295,12 @@
                                         <div class="dual-input">
                                             <div style="position:relative; flex:1; display:flex;">
                                                 <input type="text" id="city-search" placeholder="Város"
-                                                    style="flex:1; padding-right: 30px;">
+                                                    style="flex:1; padding-right: 30px;" list="city-list">
                                                 <button type="button" id="geo-btn" class="geo-btn"
-                                                    title="Jelenlegi helyzet"></button>
+                                                    title="Jelenlegi helyzet">📍</button>
                                             </div>
                                             <select id="distance-select" style="width:100px;">
-                                                <option value="">+0 km</option>
+                                                <option value="0">+0 km</option>
                                                 <option value="20">+20 km</option>
                                                 <option value="50">+50 km</option>
                                                 <option value="100">+100 km</option>
@@ -672,6 +667,14 @@
                                         <option value="Zöld">Zöld</option>
                                         <option value="Sárga">Sárga</option>
                                         <option value="Barna">Barna</option>
+                                        <option value="Bézs">Bézs</option>
+                                        <option value="Arany">Arany</option>
+                                        <option value="Bordó">Bordó</option>
+                                        <option value="Lila">Lila</option>
+                                        <option value="Narancs">Narancs</option>
+                                        <option value="Rózsaszín">Rózsaszín</option>
+                                        <option value="Pezsgő">Pezsgő</option>
+                                        <option value="Bronz">Bronz</option>
                                     </select>
                                 </div>
                             </div>
@@ -1042,10 +1045,6 @@
                                 <span>Kedvenceim</span>
                                 <span class="badge-mini" id="stat-favs-count">0</span>
                             </button>
-                            <button class="profile-tab-btn" data-profile-tab="my-searches">
-                                <span class="icon">📂</span>
-                                <span>Kereséseim</span>
-                            </button>
                             <button class="profile-tab-btn" data-profile-tab="settings">
                                 <span class="icon">⚙️</span>
                                 <span>Beállítások</span>
@@ -1104,17 +1103,6 @@
                             </div>
                         </div>
 
-                        <!-- Saved Searches Tab -->
-                        <div class="profile-tab-content" id="profile-tab-my-searches">
-                            <div class="content-header">
-                                <h3>MENTETT KERESÉSEIM</h3>
-                                <div class="header-line"></div>
-                            </div>
-                            <div id="my-searches-list" class="saved-searches-grid"
-                                style="display:grid; gap:1rem; margin-top:2rem;">
-                                <!-- Saved searches rendered here -->
-                            </div>
-                        </div>
 
                         <!-- Settings Tab -->
                         <div class="profile-tab-content" id="profile-tab-settings">
@@ -1297,15 +1285,6 @@
                 <button id="sidebar-search-close" class="sidebar-close-btn">&times;</button>
             </div>
             <div class="sidebar-search-body">
-                <div id="sidebar-quick-searches-container" class="glass-premium" style="display:none; margin-bottom:1.5rem; padding:12px; border-radius:12px; border:1px solid rgba(255,255,255,0.05);">
-                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-                        <span class="icon" style="font-size:1.1rem;">📂</span>
-                        <span style="font-size:0.75rem; font-weight:bold; letter-spacing:1px; opacity:0.8;">GYORSBETÖLTÉS</span>
-                    </div>
-                    <select id="sidebar-quick-saved-searches" onchange="if(this.value) { loadSavedSearch(JSON.parse(this.value)); closeSidebar(); }" style="width:100%; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); padding:8px 10px; border-radius:6px; color:var(--text-color); cursor:pointer; font-size:0.85rem;">
-                        <option value="">-- Keresés betöltése --</option>
-                    </select>
-                </div>
                 <div class="sidebar-input-group">
                     <label>Márka</label>
                     <select id="sidebar-brand">
@@ -1355,12 +1334,12 @@
                     <div class="sidebar-dual">
                         <div style="position:relative; flex:1; display:flex;">
                             <input type="text" id="sidebar-city" placeholder="Város (pl. Bp)"
-                                style="flex:1; padding-right: 35px;">
+                                style="flex:1; padding-right: 35px;" list="city-list">
                             <button type="button" id="sidebar-geo-btn" class="geo-btn"
                                 title="Jelenlegi helyzet">📍</button>
                         </div>
                         <select id="sidebar-distance" style="width: 80px;">
-                            <option value="">+0 km</option>
+                            <option value="0">+0 km</option>
                             <option value="20">+20 km</option>
                             <option value="50">+50 km</option>
                             <option value="100">+100 km</option>
@@ -1384,6 +1363,55 @@
         </div>
 
         <!-- Scripts -->
+        <datalist id="city-list">
+            <option value="Budapest">
+            <option value="Debrecen">
+            <option value="Szeged">
+            <option value="Miskolc">
+            <option value="Pécs">
+            <option value="Győr">
+            <option value="Nyíregyháza">
+            <option value="Kecskemét">
+            <option value="Székesfehérvár">
+            <option value="Szombathely">
+            <option value="Szolnok">
+            <option value="Tatabánya">
+            <option value="Kaposvár">
+            <option value="Érd">
+            <option value="Veszprém">
+            <option value="Békéscsaba">
+            <option value="Zalaegerszeg">
+            <option value="Sopron">
+            <option value="Eger">
+            <option value="Nagykanizsa">
+            <option value="Dunaújváros">
+            <option value="Hódmezővásárhely">
+            <option value="Dunakeszi">
+            <option value="Cegléd">
+            <option value="Baja">
+            <option value="Salgótarján">
+            <option value="Vác">
+            <option value="Gödöllő">
+            <option value="Ózd">
+            <option value="Szigetszentmiklós">
+            <option value="Szekszárd">
+            <option value="Gyöngyös">
+            <option value="Mosonmagyaróvár">
+            <option value="Pápa">
+            <option value="Gyula">
+            <option value="Hajdúböszörmény">
+            <option value="Esztergom">
+            <option value="Kiskunfélegyháza">
+            <option value="Budaörs">
+            <option value="Orosháza">
+            <option value="Ajka">
+            <option value="Kazincbarcika">
+            <option value="Szentes">
+            <option value="Kiskunhalas">
+            <option value="Jászberény">
+            <option value="Szentendre">
+            <option value="Siófok">
+        </datalist>
         <script src="lunnar-ai.js"></script>
         <script src="main.js"></script>
 </body>

@@ -346,7 +346,6 @@ const BRANDS_DATA = {
     'Volvo': { logo: 'https://cdn.simpleicons.org/volvo/white', models: ['240', '340', '440', '460', '480', '740', '760', '850', '940', '960', 'C30', 'C40', 'C70', 'EX30', 'EX90', 'S40', 'S60', 'S70', 'S80', 'S90', 'V40', 'V40 Cross Country', 'V50', 'V60', 'V60 Cross Country', 'V70', 'V90', 'V90 Cross Country', 'XC40', 'XC40 Recharge', 'XC60', 'XC70', 'XC90'] },
 };
 
-const CITIES = ['Budapest', 'Debrecen', 'Szeged', 'Miskolc', 'Pécs', 'Győr', 'Nyíregyháza', 'Kecskemét', 'Székesfehérvár', 'Szombathely'];
 const CITY_COORDS = {
     'Budapest': { lat: 47.4979, ln: 19.0402 },
     'Debrecen': { lat: 47.5316, ln: 21.6273 },
@@ -357,8 +356,47 @@ const CITY_COORDS = {
     'Nyíregyháza': { lat: 47.9554, ln: 21.7167 },
     'Kecskemét': { lat: 46.9062, ln: 19.6913 },
     'Székesfehérvár': { lat: 47.1899, ln: 18.4103 },
-    'Szombathely': { lat: 47.2307, ln: 16.6214 }
+    'Szombathely': { lat: 47.2307, ln: 16.6214 },
+    'Szolnok': { lat: 47.1833, ln: 20.2000 },
+    'Tatabánya': { lat: 47.5833, ln: 18.4000 },
+    'Kaposvár': { lat: 46.3500, ln: 17.7833 },
+    'Érd': { lat: 47.3833, ln: 18.9167 },
+    'Veszprém': { lat: 47.0933, ln: 17.9114 },
+    'Békéscsaba': { lat: 46.6833, ln: 21.1000 },
+    'Zalaegerszeg': { lat: 46.8433, ln: 16.8433 },
+    'Sopron': { lat: 47.6833, ln: 16.5833 },
+    'Eger': { lat: 47.9000, ln: 20.3833 },
+    'Nagykanizsa': { lat: 46.4500, ln: 17.0000 },
+    'Dunaújváros': { lat: 46.9667, ln: 18.9333 },
+    'Hódmezővásárhely': { lat: 46.4167, ln: 20.3167 },
+    'Dunakeszi': { lat: 47.6333, ln: 19.1333 },
+    'Cegléd': { lat: 47.1667, ln: 19.8000 },
+    'Baja': { lat: 46.1833, ln: 18.9500 },
+    'Salgótarján': { lat: 48.1000, ln: 19.8000 },
+    'Vác': { lat: 47.7833, ln: 19.1333 },
+    'Gödöllő': { lat: 47.6000, ln: 19.3667 },
+    'Ózd': { lat: 48.2167, ln: 20.3000 },
+    'Szigetszentmiklós': { lat: 47.3333, ln: 19.0500 },
+    'Szekszárd': { lat: 46.3500, ln: 18.7000 },
+    'Gyöngyös': { lat: 47.7833, ln: 19.9333 },
+    'Mosonmagyaróvár': { lat: 47.8667, ln: 17.2667 },
+    'Pápa': { lat: 47.3333, ln: 17.4667 },
+    'Gyula': { lat: 46.6500, ln: 21.2833 },
+    'Hajdúböszörmény': { lat: 47.6667, ln: 21.5167 },
+    'Esztergom': { lat: 47.7833, ln: 18.7333 },
+    'Kiskunfélegyháza': { lat: 46.7167, ln: 19.8500 },
+    'Budaörs': { lat: 47.4500, ln: 18.9667 },
+    'Orosháza': { lat: 46.5667, ln: 20.6667 },
+    'Ajka': { lat: 47.1000, ln: 17.5500 },
+    'Kazincbarcika': { lat: 48.2500, ln: 20.6333 },
+    'Szentes': { lat: 46.6500, ln: 20.2667 },
+    'Kiskunhalas': { lat: 46.4333, ln: 19.4833 },
+    'Jászberény': { lat: 47.5000, ln: 19.9167 },
+    'Szentendre': { lat: 47.6667, ln: 19.0667 },
+    'Siófok': { lat: 46.9000, ln: 18.0500 }
 };
+
+const CITIES = Object.keys(CITY_COORDS);
 
 // Haversine formula for distance
 function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
@@ -417,7 +455,10 @@ function generateCars(count = 12) {
         const hp = 80 + Math.floor(Math.random() * 420);
         const ccm = fuel === 'Elektromos' ? null : (1000 + Math.floor(Math.random() * 4) * 500);
         const price = Math.floor((3 + Math.random() * 45) * 1000000 / 100000) * 100000;
+        
+        // Use the expanded CITIES list for more variety
         const city = CITIES[Math.floor(Math.random() * CITIES.length)];
+        
         const img = CAR_IMAGES[i % CAR_IMAGES.length];
         const badge = Math.random() > 0.55 ? BADGE_TYPES[Math.floor(Math.random() * BADGE_TYPES.length)] : null;
         const daysAgo = Math.floor(Math.random() * 30);
@@ -434,7 +475,7 @@ function generateCars(count = 12) {
             currentPrice = currentPrice * (1 + (Math.random() * 0.1 - 0.05));
         }
 
-        const color = ['Fekete', 'Fehér', 'Ezüst', 'Szürke', 'Kék', 'Piros', 'Zöld', 'Sárga', 'Barna'][Math.floor(Math.random() * 9)];
+        const color = ['Fekete', 'Fehér', 'Ezüst', 'Szürke', 'Kék', 'Piros', 'Zöld', 'Sárga', 'Barna', 'Bézs', 'Arany', 'Bordó', 'Lila', 'Narancs', 'Rózsaszín', 'Pezsgő', 'Bronz'][Math.floor(Math.random() * 17)];
         const bodyType = ['Kisautó', 'Limuzin', 'Kombi', 'SUV & Pick-up', 'Kupé', 'Kabriólet', 'Egyterű', 'Transzporter'][Math.floor(Math.random() * 8)];
         const condition = ['Új', 'Újszerű', 'Használt', 'Sérült'][Math.floor(Math.random() * 4)];
 
@@ -519,7 +560,13 @@ function getModelGroups(brand, models) {
         let groupName = "Egyéb";
 
         if (brand === 'BMW') {
-            if (/^[1-8]/.test(model)) groupName = `${model[0]}-es sorozat`;
+            const num = model[0];
+            let suffix = '-es';
+            if (num === '3' || num === '8') suffix = '-as';
+            else if (num === '6') suffix = '-os';
+            else if (num === '5') suffix = '-ös';
+            
+            if (/^[1-8]/.test(model)) groupName = `${num}${suffix} sorozat`;
             else if (model.startsWith('X')) groupName = "X sorozat";
             else if (model.startsWith('Z')) groupName = "Z sorozat";
             else if (model.startsWith('i')) groupName = "i sorozat";
@@ -552,48 +599,81 @@ function getModelGroups(brand, models) {
         groups[groupName].push(model);
     });
 
-    return groups;
+    // Sort models within groups
+    Object.keys(groups).forEach(key => {
+        groups[key].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+    });
+
+    // Sort groups themselves logically (BMW 1, 2, 3... X, Z, i, M, Egyéb)
+    const sortedGroups = {};
+    const keys = Object.keys(groups).sort((a, b) => {
+        const aNum = parseInt(a);
+        const bNum = parseInt(b);
+        if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+        if (!isNaN(aNum)) return -1;
+        if (!isNaN(bNum)) return 1;
+        if (a === 'Egyéb') return 1;
+        if (b === 'Egyéb') return -1;
+        return a.localeCompare(b);
+    });
+
+    keys.forEach(k => {
+        sortedGroups[k] = groups[k];
+    });
+
+    return sortedGroups;
 }
 
-// ===== CUSTOM SELECT CLASS =====
-class CustomSelect {
+// ===== SEARCHABLE SELECT SYSTEM =====
+class SearchableSelect {
     constructor(selectEl) {
         if (!selectEl) return;
-        if (selectEl._customSelect) return selectEl._customSelect;
+        if (selectEl._searchableSelect) return selectEl._searchableSelect;
 
         this.select = selectEl;
         this.container = null;
         this.trigger = null;
+        this.dropdown = null;
+        this.searchInput = null;
         this.optionsContainer = null;
         this.init();
-        // Store reference on the element
-        selectEl._customSelect = this;
+        selectEl._searchableSelect = this;
     }
 
     init() {
-        // Create wrapper
         this.container = document.createElement('div');
-        this.container.className = 'custom-select-wrapper';
+        this.container.className = 'searchable-select';
+        
+        // Copy width if specified in style
+        if (this.select.style.width) this.container.style.width = this.select.style.width;
+        if (this.select.style.margin) this.container.style.margin = this.select.style.margin;
+
         this.select.parentNode.insertBefore(this.container, this.select);
         this.container.appendChild(this.select);
 
-        // Create trigger
+        this.select.style.display = 'none';
+
         this.trigger = document.createElement('div');
-        this.trigger.className = 'custom-select-trigger';
-        this.updateTriggerContent();
-        this.updateDisabledState();
-
-        const arrow = document.createElement('span');
-        arrow.className = 'custom-select-arrow';
-        arrow.innerHTML = '▼';
-        this.trigger.appendChild(arrow);
-
+        this.trigger.className = 'searchable-select-trigger';
+        this.updateTriggerText();
         this.container.appendChild(this.trigger);
 
-        // Create options container
+        this.dropdown = document.createElement('div');
+        this.dropdown.className = 'searchable-select-dropdown';
+        
+        const searchBox = document.createElement('div');
+        searchBox.className = 'searchable-select-search';
+        this.searchInput = document.createElement('input');
+        this.searchInput.type = 'text';
+        this.searchInput.placeholder = 'Keresés...';
+        searchBox.appendChild(this.searchInput);
+        this.dropdown.appendChild(searchBox);
+
         this.optionsContainer = document.createElement('div');
-        this.optionsContainer.className = 'custom-options';
-        this.container.appendChild(this.optionsContainer);
+        this.optionsContainer.className = 'searchable-select-options';
+        this.dropdown.appendChild(this.optionsContainer);
+
+        this.container.appendChild(this.dropdown);
 
         this.renderOptions();
 
@@ -604,97 +684,79 @@ class CustomSelect {
             this.toggle();
         });
 
+        this.searchInput.addEventListener('input', () => {
+            this.renderOptions(this.searchInput.value.toLowerCase());
+        });
+
+        this.searchInput.addEventListener('click', (e) => e.stopPropagation());
+
         document.addEventListener('click', () => this.close());
 
-        // Listen for original select changes (from user interaction only)
         this.select.addEventListener('change', () => {
-            this.updateTriggerContent();
+            this.updateTriggerText();
+            this.renderOptions();
         });
     }
 
-    // Public method to fully rebuild the custom select after external changes
-    rebuild() {
-        // Ensure we are in a clean state
-        this.updateDisabledState();
-        this.renderOptions();
-
-        // Update trigger based on the actual select state
-        this.updateTriggerContent();
-
-        // Safety: close if open during structural changes
-        this.close();
-
-        // Small delay to ensure browser has processed all DOM changes and layout is stable
-        setTimeout(() => {
-            if (this.select) {
-                this.updateTriggerContent();
-                // If it was supposed to be open, it will stay closed until user clicks again
-                // this prevents glitchy rendering of long lists
-            }
-        }, 100);
-    }
-
-    updateTriggerContent() {
+    updateTriggerText() {
         if (!this.trigger || !this.select) return;
         const selectedIndex = this.select.selectedIndex;
         const options = this.select.options;
-        const textArea = this.trigger.querySelector('span:not(.custom-select-arrow)') || document.createElement('span');
-
-        let text = '';
-        if (selectedIndex >= 0 && options[selectedIndex]) {
-            text = options[selectedIndex].textContent;
-        } else if (options.length > 0) {
-            text = options[0].textContent;
-        }
-
-        textArea.textContent = text;
-        if (!textArea.parentNode) this.trigger.prepend(textArea);
+        this.trigger.textContent = (selectedIndex >= 0 && options[selectedIndex]) ? options[selectedIndex].textContent : 'Válassz...';
     }
 
-    updateDisabledState() {
-        if (this.select.disabled) {
-            this.container.classList.add('disabled');
-            this.trigger.style.opacity = '0.4';
-            this.trigger.style.cursor = 'not-allowed';
-        } else {
-            this.container.classList.remove('disabled');
-            this.trigger.style.opacity = '1';
-            this.trigger.style.cursor = 'pointer';
-        }
+    rebuild() {
+        this.renderOptions();
+        this.updateTriggerText();
+        this.trigger.style.opacity = this.select.disabled ? '0.4' : '1';
+        this.trigger.style.cursor = this.select.disabled ? 'not-allowed' : 'pointer';
     }
 
-    renderOptions() {
+    renderOptions(filter = '') {
         if (!this.optionsContainer) return;
         this.optionsContainer.innerHTML = '';
+        
+        let foundAny = false;
+        const children = Array.from(this.select.children);
 
-        if (this.select.disabled) return;
-
-        const children = this.select.children;
-        for (let child of children) {
+        children.forEach(child => {
             if (child.tagName === 'OPTGROUP') {
-                const label = document.createElement('div');
-                label.className = 'optgroup-label';
-                label.textContent = child.label;
-                this.optionsContainer.appendChild(label);
+                const options = Array.from(child.children).filter(opt => opt.textContent.toLowerCase().includes(filter));
+                if (options.length > 0) {
+                    foundAny = true;
+                    const groupLabel = document.createElement('div');
+                    groupLabel.className = 'searchable-select-group';
+                    groupLabel.textContent = child.label;
+                    this.optionsContainer.appendChild(groupLabel);
 
-                for (let option of child.children) {
-                    this.createOption(option, true);
+                    options.forEach(opt => this.createOption(opt));
                 }
-            } else {
-                this.createOption(child);
+            } else if (child.tagName === 'OPTION') {
+                if (child.textContent.toLowerCase().includes(filter)) {
+                    foundAny = true;
+                    this.createOption(child);
+                }
             }
+        });
+
+        if (!foundAny) {
+            const noResults = document.createElement('div');
+            noResults.className = 'searchable-select-no-results';
+            noResults.textContent = 'Nincs találat';
+            this.optionsContainer.appendChild(noResults);
         }
     }
 
-    createOption(option, isChild = false) {
+    createOption(nativeOpt) {
         const opt = document.createElement('div');
-        opt.className = `custom-option ${isChild ? 'optgroup-child' : ''} ${option.selected ? 'selected' : ''}`;
-        opt.textContent = option.textContent;
-        opt.dataset.value = option.value;
+        opt.className = 'searchable-select-option';
+        if (nativeOpt.selected) opt.classList.add('selected');
+        opt.textContent = nativeOpt.textContent;
+        opt.dataset.value = nativeOpt.value;
 
         opt.addEventListener('click', (e) => {
             e.stopPropagation();
-            this.select.value = option.value;
+            this.select.value = nativeOpt.value;
             this.select.dispatchEvent(new Event('change'));
             this.close();
         });
@@ -703,14 +765,18 @@ class CustomSelect {
     }
 
     toggle() {
-        const isOpen = this.container.classList.contains('open');
-        // Close all other custom selects first
-        document.querySelectorAll('.custom-select-wrapper').forEach(w => w.classList.remove('open'));
-        if (!isOpen) this.container.classList.add('open');
+        const isActive = this.container.classList.contains('active');
+        document.querySelectorAll('.searchable-select').forEach(s => s.classList.remove('active'));
+        if (!isActive) {
+            this.container.classList.add('active');
+            this.searchInput.value = '';
+            this.renderOptions();
+            setTimeout(() => this.searchInput.focus(), 50);
+        }
     }
 
     close() {
-        this.container.classList.remove('open');
+        this.container.classList.remove('active');
     }
 }
 
@@ -719,7 +785,7 @@ function initBrands() {
     const select = document.getElementById('brand-select');
     if (!grid || !select) return;
 
-    const brandEntries = Object.entries(BRANDS_DATA);
+    const brandEntries = Object.entries(BRANDS_DATA).sort((a, b) => a[0].localeCompare(b[0]));
 
     // Truly popular brands for the grid (max 24 to stay within ~3 rows on desktop)
     const POPULAR_BRANDS_LIST = [
@@ -753,11 +819,8 @@ function initBrands() {
     select.innerHTML = '<option value="">Összes márka</option>' +
         brandEntries.map(([name]) => `<option value="${name}">${name}</option>`).join('');
 
-    // Initialize custom selects for search form
-    const searchForm = document.getElementById('car-search-form');
-    if (searchForm) {
-        searchForm.querySelectorAll('select').forEach(s => new CustomSelect(s));
-    }
+    // Initialize SearchableSelect for main brand select
+    if (select) new SearchableSelect(select);
 
     select.addEventListener('change', () => {
         const modelSelect = document.getElementById('model-select');
@@ -784,14 +847,11 @@ function initBrands() {
         modelSelect.value = "";
         modelSelect.selectedIndex = 0;
 
-        // Force the CustomSelect widget to fully rebuild
-        // Initialize custom selects for search form - only once or when needed
-        if (searchForm) {
-            searchForm.querySelectorAll('select').forEach(s => {
-                if (!s._customSelect) new CustomSelect(s);
-                else s._customSelect.rebuild();
-            });
-        }
+        // Update SearchableSelect for model select
+        if (!modelSelect._searchableSelect) new SearchableSelect(modelSelect);
+        else modelSelect._searchableSelect.rebuild();
+
+        filterCars();
         filterCars();
     });
 
@@ -893,15 +953,17 @@ function filterCars() {
 
     // Distance
     const searchCity = document.getElementById('city-search')?.value.trim();
-    const distanceLimit = parseInt(document.getElementById('distance-select')?.value);
+    const distanceLimit = parseInt(document.getElementById('distance-select')?.value) || 0;
 
     // Find target city coords if provided
     let targetCoords = null;
     if (searchCity === 'Jelenlegi helyzetem' && window.userCoords) {
         targetCoords = window.userCoords;
     } else if (searchCity && searchCity.length > 2) {
-        const match = Object.keys(CITY_COORDS).find(k => k.toLowerCase() === searchCity.toLowerCase());
-        if (match) targetCoords = CITY_COORDS[match];
+        // Case-insensitive match for CITY_COORDS
+        const searchCityLower = searchCity.toLowerCase();
+        const matchKey = Object.keys(CITY_COORDS).find(k => k.toLowerCase() === searchCityLower);
+        if (matchKey) targetCoords = CITY_COORDS[matchKey];
     }
 
     filteredCars = allCars.filter(car => {
@@ -932,12 +994,20 @@ function filterCars() {
 
         // Location Distance Filtering
         if (targetCoords && distanceLimit >= 0) {
-            const carCoords = CITY_COORDS[car.city];
-            if (!carCoords) return false;
+            // Case-insensitive lookup for car city in CITY_COORDS
+            const carCityLower = car.city.toLowerCase();
+            const carCityKey = Object.keys(CITY_COORDS).find(k => k.toLowerCase() === carCityLower);
+            const carCoords = carCityKey ? CITY_COORDS[carCityKey] : null;
+
+            if (!carCoords) {
+                // FALLBACK: if distance is requested but car city is unknown, check exact name match
+                if (searchCity && car.city.toLowerCase().includes(searchCity.toLowerCase())) return true;
+                return false; 
+            }
             const dist = getDistanceFromLatLonInKm(targetCoords.lat, targetCoords.ln, carCoords.lat, carCoords.ln);
             if (dist > distanceLimit) return false;
         } else if (searchCity && !distanceLimit && searchCity !== 'Jelenlegi helyzetem') {
-            if (car.city.toLowerCase() !== searchCity.toLowerCase()) return false;
+            if (!car.city.toLowerCase().includes(searchCity.toLowerCase())) return false;
         }
 
         return true;
@@ -1486,7 +1556,12 @@ function renderFavorites() {
     const grid = document.getElementById('favorites-grid');
     if (!grid) return;
 
-    const favCars = allCars.filter(c => favorites.includes(c.id.toString()) || favorites.includes(c._id ? c._id.toString() : ''));
+    if (allCars.length === 0 && !adsLoaded) {
+        grid.innerHTML = '<div class="placeholder"><p>Hirdetések betöltése...</p></div>';
+        return;
+    }
+
+    const favCars = allCars.filter(c => favorites.includes(c.id?.toString()) || favorites.includes(c._id ? c._id.toString() : ''));
 
     if (favCars.length === 0) {
         grid.innerHTML = '<div class="placeholder" style="grid-column: 1/-1;">MÉG NINCSENEK KEDVENC AUTÓID</div>';
@@ -1605,15 +1680,6 @@ function initSearch() {
         document.getElementById('listings').scrollIntoView({ behavior: 'smooth' });
     });
 
-    // Save Search Button
-    const saveSearchBtn = document.createElement('button');
-    saveSearchBtn.type = 'button';
-    saveSearchBtn.className = 'cta-mini';
-    saveSearchBtn.innerHTML = '📂 KERESÉS MENTÉSE';
-    saveSearchBtn.style.cssText = 'margin-top: 1rem; width: 100%; padding: 0.8rem; border: 1px dashed var(--border-color); background: transparent;';
-    saveSearchBtn.onclick = saveCurrentSearch;
-    form.appendChild(saveSearchBtn);
-
     // Detailed Search Toggle
     const toggleBtn = document.getElementById('detailed-search-toggle');
     const detailedBox = document.getElementById('detailed-search-box');
@@ -1626,11 +1692,15 @@ function initSearch() {
 
             if (isActive) {
                 detailedBox.querySelectorAll('select').forEach(s => {
-                    if (!s._customSelect) new CustomSelect(s);
+                    const ss = new SearchableSelect(s);
+                    if (ss) ss.rebuild();
                 });
             }
         });
     }
+
+    // Force SearchableSelect for ALL selects in the form
+    form.querySelectorAll('select').forEach(s => new SearchableSelect(s));
 
     // Live update count
     form.querySelectorAll('input, select').forEach(el => {
@@ -1644,7 +1714,7 @@ function initSearch() {
         const modelSelect = document.getElementById('model-select');
         modelSelect.disabled = true;
         modelSelect.innerHTML = '<option value="">Előbb válassz márkát</option>';
-        if (modelSelect._customSelect) modelSelect._customSelect.rebuild();
+        if (modelSelect._searchableSelect) modelSelect._searchableSelect.rebuild();
 
         filteredCars = [...allCars];
         renderCars(filteredCars);
@@ -1665,7 +1735,6 @@ function initSearch() {
 
             if (bodySelect) {
                 bodySelect.value = bodyType;
-                if (bodySelect._customSelect) bodySelect._customSelect.rebuild();
 
                 // Trigger filter and scroll
                 filterCars();
@@ -1794,16 +1863,14 @@ function initSubmission() {
             subModel.innerHTML = html;
             subModel.disabled = false;
 
-            // Rebuild CustomSelect if exists
-            if (subModel._customSelect) subModel._customSelect.rebuild();
+            // Rebuild SearchableSelect if exists
+            if (subModel._searchableSelect) subModel._searchableSelect.rebuild();
         });
 
-        // Initialize custom selects for submission form
-        setTimeout(() => {
-            [subBrand, subModel, subFuel, subTrans, subBody, subCondition, subColor].forEach(s => {
-                if (s) new CustomSelect(s);
-            });
-        }, 0);
+        // Initialize SearchableSelect for submission form
+        [subBrand, subModel, subFuel, subTrans, subBody, subCondition, subColor].forEach(s => {
+            if (s) new SearchableSelect(s);
+        });
     }
 
     if (subFuel) {
@@ -1920,10 +1987,7 @@ function initSubmission() {
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
 
-        // Ensure custom selects are updated
-        [subBrand, subModel, subFuel, subTrans, subBody, subCondition, subColor].forEach(s => {
-            if (s && s._customSelect) s._customSelect.rebuild();
-        });
+        // Revert: custom select rebuild removed
     }
 
     if (closeBtn) closeBtn.addEventListener('click', () => {
@@ -1937,9 +2001,7 @@ function initSubmission() {
             subModel.disabled = true;
             subModel.innerHTML = '<option value="" disabled selected>Előbb válassz márkát</option>';
         }
-        [subBrand, subModel, subFuel, subTrans, subBody, subCondition, subColor].forEach(s => {
-            if (s && s._customSelect) s._customSelect.rebuild();
-        });
+        // Revert: custom select rebuild removed
     });
 
     if (form) form.addEventListener('submit', async (e) => {
@@ -2350,23 +2412,10 @@ function generateCode() {
     return String(Math.floor(100000 + Math.random() * 900000));
 }
 
-function initAuth() {
-    // ===== ADMIN BOOTSTRAP / RECOVERY =====
-    const users = getUsers();
-    const adminUser = users.find(u => u.email === ADMIN_EMAIL);
-    if (!adminUser) {
-        users.push({
-            id: 'admin_root',
-            username: 'admin',
-            email: ADMIN_EMAIL,
-            passwordHash: ADMIN_HASH,
-            createdAt: new Date().toISOString()
-        });
-        saveUsers(users);
-    } else if (adminUser.passwordHash !== ADMIN_HASH) {
-        adminUser.passwordHash = ADMIN_HASH;
-        saveUsers(users);
-    }
+async function initAuth() {
+    token = localStorage.getItem('lunnarToken');
+    currentUser = JSON.parse(localStorage.getItem('lunnarUser') || 'null');
+    favorites = JSON.parse(localStorage.getItem('lunnarFavorites') || '[]');
 
     const loginNavBtn = document.getElementById('login-nav-btn');
     const logoutNavBtn = document.getElementById('logout-nav-btn');
@@ -2390,7 +2439,6 @@ function initAuth() {
             if (userDisplayName) userDisplayName.textContent = currentUser.username.toUpperCase();
             if (userAvatarLetter) userAvatarLetter.textContent = currentUser.username.charAt(0).toUpperCase();
 
-            // Show admin link if user is administrator
             if (adminNavLink) {
                 adminNavLink.style.display = (currentUser.email === ADMIN_EMAIL) ? 'block' : 'none';
             }
@@ -2398,6 +2446,14 @@ function initAuth() {
             if (loginNavBtn) loginNavBtn.style.display = 'block';
             if (userInfo) userInfo.style.display = 'none';
         }
+    }
+
+    if (token && currentUser) {
+        updateAuthUI();
+        await syncFavoritesWithBackend();
+        fetchMyAds();
+    } else {
+        updateAuthUI();
     }
 
     updateAuthUI();
@@ -2866,6 +2922,12 @@ async function renderProfile() {
     const localAds = JSON.parse(localStorage.getItem('lunnarLocalAds') || '[]');
     const myAds = localAds.filter(ad => ad.ownerEmail === currentUser.email || ad.ownerId === currentUser.id);
 
+    // Filter server ads for owner too
+    const myServerAds = allCars.filter(ad => ad.ownerEmail === currentUser.email || ad.ownerId === currentUser.id || ad.email === currentUser.email);
+    
+    // Combine unique ads for the counter
+    const uniqueMyAds = [...new Map([...myServerAds, ...myAds].map(item => [item._id || item.id, item])).values()];
+
     const favsIds = JSON.parse(localStorage.getItem('lunnarFavorites') || '[]');
     const favsActive = allCars.filter(c => {
         const idStr = c.id ? c.id.toString() : '';
@@ -2876,7 +2938,7 @@ async function renderProfile() {
     const adsCountEl = document.getElementById('stat-ads-count');
     const favsCountEl = document.getElementById('stat-favs-count');
 
-    if (adsCountEl) adsCountEl.textContent = myAds.length;
+    if (adsCountEl) adsCountEl.textContent = uniqueMyAds.length;
     if (favsCountEl) favsCountEl.textContent = favsActive.length;
 
     // 2.5 Update Verification & Ratings badges
@@ -2944,7 +3006,6 @@ async function renderProfile() {
     // 3. Render Listings & Favorites
     fetchMyAds();
     renderProfileFavorites();
-    fetchSavedSearches();
 }
 
 let profileTabsInitialized = false;
@@ -3001,88 +3062,7 @@ function renderProfileFavorites() {
     renderCarsIn(favCars, grid, false);
 }
 
-async function fetchSavedSearches() {
-    const grid = document.getElementById('my-searches-list');
-    if (!grid) return;
 
-    if (!token) return;
-
-    try {
-        const res = await fetch(`${API_BASE_URL}/user/saved-searches`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
-        if (res.ok) {
-            renderSavedSearches(data.savedSearches);
-            updateQuickSearchMenus(data.savedSearches);
-        }
-    } catch (e) { console.error('Hiba a mentett keresések lekérésekor', e); }
-}
-
-function updateQuickSearchMenus(searches) {
-    const mainSelect = document.getElementById('quick-saved-searches');
-    const sidebarSelect = document.getElementById('sidebar-quick-saved-searches');
-    const mainContainer = document.getElementById('quick-saved-searches-container');
-    const sidebarContainer = document.getElementById('sidebar-quick-searches-container');
-
-    if (!searches || searches.length === 0) {
-        if (mainContainer) mainContainer.style.display = 'none';
-        if (sidebarContainer) sidebarContainer.style.display = 'none';
-        return;
-    }
-
-    if (mainContainer) mainContainer.style.display = 'block';
-    if (sidebarContainer) sidebarContainer.style.display = 'block';
-
-    const optionsHTML = `
-        <option value="">-- Válassz egy mentett keresést --</option>
-        ${searches.map(s => `<option value='${JSON.stringify(s.params)}'>${s.name}</option>`).join('')}
-    `;
-
-    if (mainSelect) mainSelect.innerHTML = optionsHTML;
-    if (sidebarSelect) sidebarSelect.innerHTML = optionsHTML;
-}
-
-function renderSavedSearches(searches) {
-    const grid = document.getElementById('my-searches-list');
-    if (!grid) return;
-
-    if (!searches || searches.length === 0) {
-        grid.innerHTML = '<div class="placeholder">NINCSENEK MENTETT KERESÉSEID</div>';
-        return;
-    }
-
-    grid.innerHTML = searches.map(s => `
-        <div class="saved-search-card glass-premium" style="padding:1.5rem; border-radius:12px; display:flex; justify-content:space-between; align-items:center; border: 1px solid rgba(255,255,255,0.05);">
-            <div>
-                <h4 style="margin:0; font-family:var(--font-heading); color:var(--text-color);">${s.name}</h4>
-                <p style="margin:0.5rem 0 0; font-size:0.8rem; opacity:0.6;">
-                    ${Object.entries(s.params).map(([k, v]) => `${translateKey(k)}: ${v}`).join(', ')}
-                </p>
-            </div>
-            <div style="display:flex; gap:10px;">
-                <button class="cta-mini" onclick='loadSavedSearch(${JSON.stringify(s.params)})' style="background:var(--accent-color); color:white;">Lefuttatás</button>
-                <button class="cta-mini" onclick="deleteSavedSearch('${s._id}')" style="background:#ef4444; color:white;">Törlés</button>
-            </div>
-        </div>
-    `).join('');
-}
-
-function translateKey(key) {
-    const dict = {
-        brand: 'Márka',
-        model: 'Modell',
-        minPrice: 'Min ár',
-        maxPrice: 'Max ár',
-        fuel: 'Üzemanyag',
-        transmission: 'Váltó',
-        minYear: 'Min év',
-        maxYear: 'Max év',
-        minHp: 'Min LE',
-        maxHp: 'Max LE'
-    };
-    return dict[key] || key;
-}
 
 async function fetchMyAds(searchQuery = '') {
     if (!token || !currentUser) return;
@@ -3288,7 +3268,7 @@ function initSidebarSearch() {
         sortedBrands.map(b => `<option value="${b}">${b}</option>`).join('');
 
     // Initialize custom selects for sidebar
-    sidebar.querySelectorAll('select').forEach(s => new CustomSelect(s));
+    sidebar.querySelectorAll('select').forEach(s => new SearchableSelect(s));
 
     // Brand → Model cascade
     sidebarBrand.addEventListener('change', () => {
@@ -3596,8 +3576,24 @@ function requestUserLocation(isAuto = false) {
             window.userCoords = { lat: pos.coords.latitude, ln: pos.coords.longitude };
             if (mainInput) mainInput.value = 'Jelenlegi helyzetem';
             if (sidebarInput) sidebarInput.value = 'Jelenlegi helyzetem';
+            
+            // Auto-set a reasonable distance if none or 0 is selected
+            const distSelect = document.getElementById('distance-select');
+            const sideDistSelect = document.getElementById('sidebar-distance');
+            if (distSelect && (distSelect.value === "" || distSelect.value === "0")) {
+                distSelect.value = "50";
+                if (distSelect._searchableSelect) distSelect._searchableSelect.rebuild();
+            }
+            if (sideDistSelect && (sideDistSelect.value === "" || sideDistSelect.value === "0")) {
+                sideDistSelect.value = "50";
+                if (sideDistSelect._searchableSelect) sideDistSelect._searchableSelect.rebuild();
+            }
+
             if (mainBtn) mainBtn.textContent = '📍';
             if (sidebarBtn) sidebarBtn.textContent = '📍';
+            
+            if (!isAuto) showToast('Helymeghatározás sikeres!', 'success');
+            
             if (typeof filterCars === 'function') filterCars();
         },
         (err) => {
@@ -3990,7 +3986,7 @@ async function init() {
     initSearch();
     initModal();
     initSubmission();
-    initAuth();
+    await initAuth();
     initHeaderScroll();
     initHamburger();
     initStats();
@@ -4000,6 +3996,13 @@ async function init() {
     initCompareListeners();
     initGeolocation();
     initAiChat();
+
+    // Catch-all for any remaining selects across the page
+    setTimeout(() => {
+        document.querySelectorAll('select').forEach(s => {
+            new SearchableSelect(s);
+        });
+    }, 500);
 
     // Router
     window.addEventListener('hashchange', handleRouting);
@@ -4015,117 +4018,6 @@ window.addEventListener('resize', () => {
 
 // ===== VIN CHECK (EXTERNAL) =====
 // carVertical integration via direct link in UI
-
-
-// ===== SAVED SEARCHES =====
-async function saveCurrentSearch() {
-    if (!token) {
-        showToast('A keresés mentéséhez be kell jelentkezned!', 'error');
-        document.getElementById('login-nav-btn').click();
-        return;
-    }
-
-    const form = document.getElementById('car-search-form');
-    if (!form) return;
-
-    const formData = new FormData(form);
-    const searchParams = {};
-    formData.forEach((value, key) => {
-        if (value && value !== 'any' && value !== '0') searchParams[key] = value;
-    });
-
-    if (Object.keys(searchParams).length === 0) {
-        showToast('Nincs kiválasztott szűrő a mentéshez.', 'warning');
-        return;
-    }
-
-    const name = prompt('Adj nevet a keresésnek (pl. "Olcsó BMW-k"):', `Keresés ${new Date().toLocaleDateString()}`);
-    if (!name) return;
-
-    try {
-        const res = await fetch(`${API_BASE_URL}/user/saved-searches`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ name, params: searchParams })
-        });
-        const data = await res.json();
-        if (res.ok) {
-            showToast('Keresés elmentve a profilodba! 📂', 'success');
-            fetchSavedSearches(); // Refresh both profile list and quick menus
-        } else {
-            showToast(data.message || 'Hiba a mentés során', 'error');
-        }
-    } catch (err) {
-        showToast('Hálózati hiba', 'error');
-    }
-}
-window.saveCurrentSearch = saveCurrentSearch;
-
-function loadSavedSearch(params) {
-    const mainForm = document.getElementById('car-search-form');
-    const sidebar = document.getElementById('sidebar-search');
-
-    // Helper to fill inputs in a container
-    const fillInputs = (container) => {
-        if (!container) return;
-        for (const key in params) {
-            // Match name attribute for main form, or id suffix for sidebar
-            let input = container.querySelector(`[name="${key}"]`);
-            if (!input && container.id === 'sidebar-search') {
-                // Sidebar uses IDs like 'sidebar-brand', 'sidebar-price-from' etc.
-                const sidebarIdMap = {
-                    brand: 'sidebar-brand',
-                    model: 'sidebar-model',
-                    fuel: 'sidebar-fuel',
-                    minPrice: 'sidebar-price-from',
-                    maxPrice: 'sidebar-price-to',
-                    minYear: 'sidebar-year-from',
-                    maxYear: 'sidebar-year-to',
-                    minKm: 'sidebar-km-from',
-                    maxKm: 'sidebar-km-to'
-                };
-                input = document.getElementById(sidebarIdMap[key]);
-            }
-            if (input) {
-                input.value = params[key];
-                // Trigger change for dependent selects (like model)
-                if (key === 'brand') input.dispatchEvent(new Event('change'));
-            }
-        }
-    };
-
-    if (mainForm) {
-        mainForm.reset();
-        const detailedBox = document.getElementById('detailed-search-box');
-        if (detailedBox) detailedBox.style.display = 'block';
-        fillInputs(mainForm);
-    }
-
-    if (sidebar) {
-        fillInputs(sidebar);
-    }
-    
-    showToast('Keresési feltételek betöltve!', 'info');
-    filterCars();
-    window.location.hash = '#home'; // Jump to results
-}
-
-window.loadSavedSearch = loadSavedSearch;
-
-async function deleteSavedSearch(id) {
-    if (!confirm('Biztosan törölni szeretnéd ezt a mentett keresést?')) return;
-    try {
-        const res = await fetch(`${API_BASE_URL}/user/saved-searches/${id}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) {
-            showToast('Keresés törölve');
-            renderProfile();
-        }
-    } catch (e) { showToast('Hiba a törléskor', 'error'); }
-}
-window.deleteSavedSearch = deleteSavedSearch;
 
 
 // ===== COMPARE SYSTEM =====

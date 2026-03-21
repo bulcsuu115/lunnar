@@ -36,6 +36,15 @@ const userSchema = new mongoose.Schema({
     username: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     email: { type: String, required: true, unique: true },
+    phone: { type: String },
+    isVerified: { type: Boolean, default: false },
+    sellerRating: { type: Number, default: 0 },
+    totalRatings: { type: Number, default: 0 },
+    ratings: [{
+        raterId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        score: Number,
+        createdAt: { type: Date, default: Date.now }
+    }],
     favorites: [{ type: String }], // Array of ad IDs (or static IDs)
     createdAt: { type: Date, default: Date.now }
 });
@@ -60,12 +69,27 @@ const adSchema = new mongoose.Schema({
     email: String,
     images: [String],
     description: String,
+    vin: String,
+    views: { type: Number, default: 0 },
+    favoritesCount: { type: Number, default: 0 },
+    isPremium: { type: Boolean, default: false },
     owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'approved' },
     createdAt: { type: Date, default: Date.now }
 });
 
 const Ad = mongoose.model('Ad', adSchema);
+
+const messageSchema = new mongoose.Schema({
+    adId: { type: mongoose.Schema.Types.ObjectId, ref: 'Ad', required: true },
+    senderId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    receiverId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    content: { type: String, required: true },
+    isRead: { type: Boolean, default: false },
+    createdAt: { type: Date, default: Date.now }
+});
+
+const Message = mongoose.model('Message', messageSchema);
 
 // ===== AUTH MIDDLEWARE =====
 const authenticateToken = (req, res, next) => {
@@ -83,10 +107,10 @@ const authenticateToken = (req, res, next) => {
 // ===== AUTH ROUTES =====
 app.post('/api/auth/register', async (req, res) => {
     try {
-        const { username, email, password } = req.body;
+        const { username, email, password, phone } = req.body;
         console.log(`[AUTH] Regisztrációs kísérlet: ${username} (${email})`);
         const hashedPassword = await bcrypt.hash(password, 10);
-        const user = new User({ username, email, password: hashedPassword });
+        const user = new User({ username, email, password: hashedPassword, phone });
         await user.save();
         console.log(`[AUTH] Sikeres regisztráció: ${username}`);
         res.status(201).json({ message: 'Sikeres regisztráció!' });
@@ -104,7 +128,13 @@ app.post('/api/auth/login', async (req, res) => {
             return res.status(401).json({ message: 'Érvénytelen email vagy jelszó' });
         }
         const token = jwt.sign({ userId: user._id, username: user.username }, jwtSecret, { expiresIn: '7d' });
-        res.json({ token, username: user.username, favorites: user.favorites });
+        res.json({ 
+            token, 
+            username: user.username, 
+            favorites: user.favorites,
+            isVerified: user.isVerified,
+            userId: user._id
+        });
     } catch (err) {
         res.status(500).json({ message: 'Szerver hiba a bejelentkezés során' });
     }
@@ -113,7 +143,8 @@ app.post('/api/auth/login', async (req, res) => {
 // Public Routes
 app.get('/api/ads', async (req, res) => {
     try {
-        const ads = await Ad.find({ status: 'approved' }).sort({ createdAt: -1 });
+        // Find approved ads, sort by isPremium first, then createdAt
+        const ads = await Ad.find({ status: 'approved' }).sort({ isPremium: -1, createdAt: -1 });
         res.json(ads);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -174,6 +205,144 @@ app.post('/api/user/favorites', authenticateToken, async (req, res) => {
         const { favorites } = req.body;
         await User.findByIdAndUpdate(req.user.userId, { favorites });
         res.json({ message: 'Kedvencek szinkronizálva' });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// ===== NOVEL PREMIUM FEATURES APIS =====
+
+// User verification (simulate SMS)
+app.post('/api/auth/verify', authenticateToken, async (req, res) => {
+    try {
+        await User.findByIdAndUpdate(req.user.userId, { isVerified: true });
+        res.json({ message: 'Fiók sikeresen hitelesítve!' });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Rate seller
+app.post('/api/users/:id/rate', authenticateToken, async (req, res) => {
+    try {
+        const { score } = req.body; // 1 to 5
+        if (score < 1 || score > 5) return res.status(400).json({ message: 'Érvénytelen pontszám' });
+        
+        const seller = await User.findById(req.params.id);
+        if (!seller) return res.status(404).json({ message: 'Eladó nem található' });
+        
+        // Prevent self rating
+        if (seller._id.toString() === req.user.userId) return res.status(400).json({ message: 'Saját magadat nem értékelheted' });
+
+        seller.ratings.push({ raterId: req.user.userId, score });
+        seller.totalRatings += 1;
+        const totalScore = seller.ratings.reduce((acc, r) => acc + r.score, 0);
+        seller.sellerRating = totalScore / seller.totalRatings;
+        
+        await seller.save();
+        res.json({ message: 'Értékelés sikeresen mentve!', newRating: seller.sellerRating });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Get user profile summary
+app.get('/api/users/:id/profile', async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id).select('username phone isVerified sellerRating totalRatings createdAt');
+        if (!user) return res.status(404).json({ message: 'Felhasználó nem található' });
+        res.json(user);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Increment Ad views
+app.post('/api/ads/:id/view', async (req, res) => {
+    try {
+        await Ad.findByIdAndUpdate(req.params.id, { $inc: { views: 1 } });
+        res.json({ message: 'Views incremented' });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Make Ad Premium (simulate payment)
+app.post('/api/ads/:id/premium', authenticateToken, async (req, res) => {
+    try {
+        const ad = await Ad.findById(req.params.id);
+        if (!ad) return res.status(404).json({ message: 'Hirdetés nem található' });
+        if (ad.owner && ad.owner.toString() !== req.user.userId) return res.status(403).json({ message: 'Nincs jogosultságod' });
+        
+        ad.isPremium = true;
+        await ad.save();
+        res.json({ message: 'Hirdetés kiemelve!' });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// User Stats for Dashboard
+app.get('/api/user/stats', authenticateToken, async (req, res) => {
+    try {
+        const ads = await Ad.find({ owner: req.user.userId });
+        const totalViews = ads.reduce((acc, ad) => acc + ad.views, 0);
+        
+        const adIds = ads.map(ad => ad._id.toString());
+        const totalFavoritesResult = await User.aggregate([
+            { $unwind: "$favorites" },
+            { $match: { "favorites": { $in: adIds } } },
+            { $count: "count" }
+        ]);
+        const totalFavorites = totalFavoritesResult.length > 0 ? totalFavoritesResult[0].count : 0;
+        
+        res.json({
+            totalAds: ads.length,
+            totalViews: totalViews,
+            totalFavorites: totalFavorites
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Messaging
+app.get('/api/messages/:adId', authenticateToken, async (req, res) => {
+    try {
+        const messages = await Message.find({ adId: req.params.adId }).sort({ createdAt: 1 });
+        // Only return if user is sender or receiver - simple security check
+        const relevantMessages = messages.filter(m => 
+            m.senderId.toString() === req.user.userId || 
+            m.receiverId.toString() === req.user.userId
+        );
+        res.json(relevantMessages);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+app.get('/api/messages', authenticateToken, async (req, res) => {
+    try {
+        const messages = await Message.find({
+            $or: [{ senderId: req.user.userId }, { receiverId: req.user.userId }]
+        }).populate('adId', 'brand model images views isPremium').populate('senderId', 'username').populate('receiverId', 'username').sort({ createdAt: -1 });
+        res.json(messages);
+    } catch (err) {
+         res.status(500).json({ message: err.message });
+    }
+});
+
+app.post('/api/messages', authenticateToken, async (req, res) => {
+    try {
+        const { adId, receiverId, content } = req.body;
+        const msg = new Message({
+            adId,
+            senderId: req.user.userId,
+            receiverId,
+            content
+        });
+        await msg.save();
+        res.status(201).json(msg);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

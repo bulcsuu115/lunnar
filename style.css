@@ -465,7 +465,7 @@ body.light-mode .nav-logo {
 
 .glitch-text::before {
     left: 2px;
-    text-shadow: 2px 0 #ff00c1;
+    text-shadow: 2px 0 #276bff;
     clip: rect(44px, 450px, 56px, 0);
     animation: glitch-anim 5s infinite linear alternate-reverse;
 }

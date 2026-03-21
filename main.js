@@ -1200,18 +1200,23 @@ function renderAdDetail(id) {
                         <div class="spec-item"><span>💎 Állapot</span><strong>${car.condition || '-'}</strong></div>
                         ${car.ccm ? `<div class="spec-item"><span>🔧 Hengerűrtartalom</span><strong>${car.ccm} ccm</strong></div>` : ''}
                         <div class="spec-item"><span>📍 Település</span><strong>${car.city}</strong></div>
+                        ${car.vin ? `<div class="spec-item" style="grid-column: 1/-1;"><span>🔍 Alvázszám (VIN)</span><strong>${car.vin}</strong> <button class="cta-mini" onclick="window.open('https://www.carvertical.com/hu/check?vin=${car.vin}', '_blank')" style="padding:2px 8px; font-size:0.7rem; margin-left:10px; background:#005bea; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">Lekérdezés a carVerticalon</button></div>` : ''}
                     </div>
                 </div>
                 <div class="detail-desc-card">
                     <h3>LEÍRÁS</h3>
                     <p>${car.description || 'Nincs megadva leírás.'}</p>
-                    <div class="detail-contact">
+                    <div class="detail-contact" style="display:flex; flex-direction:column; gap:0.5rem; margin-top:2rem;">
                         ${car.phone ? `
-                            <button class="cta-button primary" onclick="window.location.href='tel:${car.phone}'">📞 ELADÓ HÍVÁSA (${car.phone})</button>
-                            ${car.email ? `<p style="margin-top: 1rem; opacity: 0.7; font-size: 0.9rem;">📧 ${car.email}</p>` : ''}
+                            <button class="cta-button primary" onclick="window.location.href='tel:${car.phone}'" style="width:100%;">📞 ELADÓ HÍVÁSA (${car.phone})</button>
                         ` : `
-                            <button class="cta-button primary">📞 ELADÓ HÍVÁSA</button>
+                            <button class="cta-button primary" style="width:100%;">📞 ELADÓ HÍVÁSA</button>
                         `}
+                        <button class="cta-button secondary" onclick="openUserChat('${car._id || car.id}', '${car.seller || 'Eladó'}', '${car.brand} ${car.model}')" style="width:100%;">💬 CHAT AZ ELADÓVAL</button>
+                        ${token && currentUser ? `
+                            <button class="cta-mini" onclick="openRatingModal('${car.ownerId || car.seller}', '${car.seller || 'Eladó'}')" style="width:100%; padding:0.8rem; border:1px solid var(--border-color); background:transparent; color:var(--text-color); font-weight:bold; letter-spacing:1px;">⭐ ELADÓ ÉRTÉKELÉSE</button>
+                        ` : ''}
+                        ${car.email ? `<p style="margin-top: 0.5rem; text-align:center; opacity: 0.7; font-size: 0.9rem;">📧 ${car.email}</p>` : ''}
                     </div>
                 </div>
             </div>
@@ -1316,6 +1321,11 @@ function renderAdDetail(id) {
     // Render price chart if data exists
     if (car.priceHistory && car.priceHistory.length > 0) {
         setTimeout(() => renderPriceChart(car.priceHistory), 100);
+    }
+    
+    // Rögzítjük a megtekintést a szerveren
+    if (car._id || car.id) {
+        fetch(`${API_BASE_URL}/ads/${car._id || car.id}/view`, { method: 'POST' }).catch(e => console.log('View stat error ignored', e));
     }
 }
 
@@ -1898,6 +1908,7 @@ function initSubmission() {
                 bodyType: subBody ? subBody.value : "",
                 condition: subCondition ? subCondition.value : "",
                 color: subColor ? subColor.value : "",
+                vin: getVal('sub-vin'),
                 status: 'approved',
                 ownerEmail: currentUser.email,
                 ownerId: currentUser.id,
@@ -2518,7 +2529,15 @@ function initAuth() {
 
             if (res.ok) {
                 token = data.token;
-                currentUser = { username: data.username, email: email, id: data.userId };
+                currentUser = { 
+                    username: data.username, 
+                    email: email, 
+                    id: data.userId,
+                    isVerified: data.isVerified || false,
+                    phone: data.phone || '',
+                    sellerRating: data.sellerRating || 0,
+                    totalRatings: data.totalRatings || 0
+                };
                 localStorage.setItem('lunnarToken', token);
                 localStorage.setItem('lunnarUser', JSON.stringify(currentUser));
 
@@ -2771,6 +2790,68 @@ async function renderProfile() {
     if (adsCountEl) adsCountEl.textContent = myAds.length;
     if (favsCountEl) favsCountEl.textContent = favsActive.length;
 
+    // 2.5 Update Verification & Ratings badges
+    const verifiedBadge = document.getElementById('profile-verified-badge');
+    const verifyBtn = document.getElementById('verify-account-btn');
+    const ratingDisplay = document.getElementById('profile-rating-display');
+    const ratingValue = document.getElementById('profile-rating-value');
+    const ratingCount = document.getElementById('profile-rating-count');
+
+    if (currentUser.isVerified) {
+        if(verifiedBadge) verifiedBadge.style.display = 'inline-block';
+        if(verifyBtn) verifyBtn.style.display = 'none';
+    } else {
+        if(verifiedBadge) verifiedBadge.style.display = 'none';
+        if(verifyBtn) verifyBtn.style.display = 'block';
+    }
+
+    if (currentUser.totalRatings > 0) {
+        if(ratingDisplay) ratingDisplay.style.display = 'block';
+        if(ratingValue) ratingValue.textContent = Number(currentUser.sellerRating).toFixed(1);
+        if(ratingCount) ratingCount.textContent = `(${currentUser.totalRatings} értékelés)`;
+    } else {
+        if(ratingDisplay) ratingDisplay.style.display = 'none';
+    }
+
+    // Hitelesítés logikája (Szimulált)
+    if (verifyBtn) {
+        verifyBtn.onclick = async () => {
+            const code = prompt('Kérjük, add meg az SMS-ben kapott 6 számjegyű kódot (Szimuláció: írj be bármit):');
+            if (code) {
+                try {
+                    const res = await fetch(`${API_BASE_URL}/auth/verify`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({ code })
+                    });
+                    if (res.ok) {
+                        currentUser.isVerified = true;
+                        localStorage.setItem('lunnarUser', JSON.stringify(currentUser));
+                        showToast('Sikeres hitelesítés! Profilod megkapta az ellenőrzött jelvényt.', 'success');
+                        renderProfile();
+                    } else {
+                        showToast('Hiba a hitelesítés során!', 'error');
+                    }
+                } catch(e) {
+                    showToast('Hálózati hiba!', 'error');
+                }
+            }
+        };
+    }
+
+    // Load actual server-side stats for views/favs
+    fetch(`${API_BASE_URL}/user/stats`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+    })
+    .then(res => res.json())
+    .then(stats => {
+        const tViews = document.getElementById('stat-total-views');
+        const tFavs = document.getElementById('stat-total-favs');
+        if(tViews && stats.totalViews !== undefined) tViews.textContent = stats.totalViews;
+        if(tFavs && stats.totalFavorites !== undefined) tFavs.textContent = stats.totalFavorites;
+    })
+    .catch(e => console.log('Hiba a statisztika lekérésekor', e));
+
     // 3. Render Listings & Favorites
     fetchMyAds();
     renderProfileFavorites();
@@ -2885,7 +2966,6 @@ function renderCarCard(car, isProfileView = false) {
     const price = typeof formatPrice === 'function' ? formatPrice(car.price) : car.price + ' Ft';
     const km = typeof formatKm === 'function' ? formatKm(car.km) : car.km + ' km';
 
-    // Ownership check expanded to include car.email (common fallback)
     const isOwner = currentUser && (
         car.ownerEmail === currentUser.email ||
         car.ownerId === currentUser.id ||
@@ -2895,7 +2975,8 @@ function renderCarCard(car, isProfileView = false) {
     );
 
     return `
-        <div class="car-card glass-premium fade-in" data-id="${car._id || car.id}">
+        <div class="car-card glass-premium fade-in ${car.isPremium ? 'premium-ad' : ''}" data-id="${car._id || car.id}" style="${car.isPremium ? 'border: 2px solid #fbbf24; position: relative;' : ''}">
+            ${car.isPremium ? '<div style="position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:#fbbf24; color:#000; padding:4px 12px; border-radius:12px; font-weight:bold; font-size:0.75rem; z-index:10; box-shadow:0 4px 10px rgba(251,191,36,0.3);">KIEMELT</div>' : ''}
             <div class="car-image" onclick="window.location.hash='#ad/${car._id || car.id}'">
                 <img src="${firstImg}" alt="${car.brand} ${car.model}" loading="lazy">
                 <button class="car-fav ${isFavorite ? 'active' : ''}" data-fav-id="${car._id || car.id}" title="Kedvenc">
@@ -2926,14 +3007,15 @@ function renderCarCard(car, isProfileView = false) {
                 </div>` : ''}
 
                 ${isProfileView && isOwner ? `
-                <div class="card-management-actions" style="display:flex; gap:0.5rem; margin-top:1rem;">
+                <div class="card-management-actions" style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:1rem;">
                     ${(currentUser && currentUser.email === ADMIN_EMAIL && car.status === 'pending') ? `
                         <button class="admin-btn approve" onclick="event.stopPropagation(); moderateAd('${car._id || car.id}', 'approved')" style="flex:1; padding: 0.5rem; font-size: 0.75rem;">Elfogad</button>
                         <button class="admin-btn reject" onclick="event.stopPropagation(); moderateAd('${car._id || car.id}', 'rejected')" style="flex:1; padding: 0.5rem; font-size: 0.75rem;">Elutasít</button>
                     ` : `
                         <button class="admin-btn edit" onclick="event.stopPropagation(); editAd('${car._id || car.id}')" style="flex:1; padding: 0.5rem; font-size: 0.75rem;">Szerkesztés</button>
+                        ${!car.isPremium ? `<button class="admin-btn" onclick="event.stopPropagation(); makeAdPremium('${car._id || car.id}')" style="flex:1; padding: 0.5rem; background:#fbbf24; color:#000; font-size: 0.75rem; border:none; font-weight:bold;">🌟 Kiemelés (5000Ft)</button>` : `<div style="flex:1; padding: 0.5rem; background:#fbbf24; color:#000; font-size: 0.75rem; text-align:center; border-radius:4px; font-weight:bold;">🌟 Kiemelve</div>`}
                     `}
-                    <button class="admin-btn delete" onclick="event.stopPropagation(); deleteAd('${car._id || car.id}')" style="flex:1; padding: 0.5rem; background:#dc2626; font-size: 0.75rem;">Törlés</button>
+                    <button class="admin-btn delete" onclick="event.stopPropagation(); deleteAd('${car._id || car.id}')" style="flex:1; padding: 0.5rem; background:#dc2626; font-size: 0.75rem; border:none;">Törlés</button>
                 </div>
                 ` : `
                 <div class="card-bottom-actions" style="margin-top: 1rem; display: flex; justify-content: flex-end;">
@@ -3420,6 +3502,232 @@ function initRangeSliders() {
     setupRange('price-range', 'price-from', 'price-to', 'price-from-val', 'price-to-val', '');
     setupRange('year-range', 'year-from', 'year-to', 'year-from-val', 'year-to-val', '');
 }
+
+// ===== RATING SYSTEM =====
+function openRatingModal(sellerId, sellerName) {
+    if (!token || !currentUser) {
+        showToast('Az értékeléshez be kell jelentkezned!', 'error');
+        return;
+    }
+    const modal = document.getElementById('rating-modal');
+    if (!modal) return;
+    
+    document.getElementById('rating-seller-name').textContent = sellerName;
+    
+    // Clear previous stars
+    const stars = modal.querySelectorAll('.star');
+    stars.forEach(s => s.classList.remove('active'));
+    
+    let selectedRating = 0;
+    stars.forEach(star => {
+        star.onclick = () => {
+            selectedRating = parseInt(star.dataset.val);
+            stars.forEach(s => s.classList.remove('active'));
+            for(let i=0; i<selectedRating; i++) {
+                stars[i].classList.add('active');
+            }
+        };
+    });
+
+    const submitBtn = document.getElementById('submit-rating-btn');
+    submitBtn.onclick = async () => {
+        if (selectedRating === 0) {
+            showToast('Kérjük, válassz csillagot!', 'error');
+            return;
+        }
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'KÜLDÉS...';
+        
+        try {
+            const res = await fetch(`${API_BASE_URL}/users/${sellerId}/rate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ score: selectedRating })
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                showToast('Értékelés sikeresen mentve!', 'success');
+                modal.classList.remove('active');
+            } else {
+                showToast(data.message || 'Hiba történt az értékelés során', 'error');
+            }
+        } catch (err) {
+            showToast('Hálózati hiba az értékelés küldésekor', 'error');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'ÉRTÉKELÉS BEKÜLDÉSE';
+        }
+    };
+
+    modal.classList.add('active');
+}
+
+document.getElementById('rating-close')?.addEventListener('click', () => {
+    document.getElementById('rating-modal')?.classList.remove('active');
+});
+
+// ===== PREMIUM ADS (SIMULATED TIER) =====
+async function makeAdPremium(adId) {
+    if (!token || !currentUser) return;
+    if (!confirm('A prémium kiemelés díja 5000 Ft (Demó: gombnyomásra szimulált egyenleglevonás). Folytatod?')) return;
+    
+    try {
+        const res = await fetch(`${API_BASE_URL}/ads/${adId}/premium`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (res.ok) {
+            showToast('Hálózati fizetés sikeres! A hirdetésed prémium lett. Várj...', 'success');
+            // Refresh logic depending on view
+            setTimeout(() => {
+                fetchAds();
+                if (window.location.hash === '#view-profile') renderProfile();
+            }, 1000);
+        } else {
+            showToast('Hiba a kiemelés során!', 'error');
+        }
+    } catch(e) {
+        showToast('Hálózati fizetési hiba', 'error');
+    }
+}
+
+window.makeAdPremium = makeAdPremium;
+window.openRatingModal = openRatingModal;
+
+// ===== USER TO USER CHAT & AI INTEGRATION =====
+let activeChatAdId = null;
+let activeChatReceiverId = null;
+
+function openUserChat(adId, sellerName, paramAdTitle) {
+    if (!token || !currentUser) {
+        showToast('A chat használatához be kell jelentkezned!', 'error');
+        return;
+    }
+    const modal = document.getElementById('user-chat-modal');
+    if (!modal) return;
+    
+    activeChatAdId = adId;
+    activeChatReceiverId = sellerName; // We pass the seller name as identifier or an actual ID
+    
+    document.getElementById('user-chat-title').textContent = paramAdTitle;
+    document.getElementById('user-chat-seller-name').textContent = sellerName;
+    
+    const messagesContainer = document.getElementById('user-chat-messages');
+    messagesContainer.innerHTML = '<div class="placeholder">Üzenetek betöltése...</div>';
+    
+    modal.classList.add('active');
+    
+    fetchChatMessages();
+}
+
+function closeUserChat() {
+    document.getElementById('user-chat-modal')?.classList.remove('active');
+    activeChatAdId = null;
+    activeChatReceiverId = null;
+}
+
+document.getElementById('user-chat-close')?.addEventListener('click', closeUserChat);
+
+async function fetchChatMessages() {
+    if (!activeChatAdId) return;
+    
+    try {
+        const res = await fetch(`${API_BASE_URL}/messages?adId=${activeChatAdId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const messages = await res.json();
+        renderUserChatMessages(messages);
+    } catch (err) {
+        console.warn('Hiba az üzenetek lekérésekor');
+        document.getElementById('user-chat-messages').innerHTML = '<div class="placeholder">Nem sikerült betölteni az üzeneteket.</div>';
+    }
+}
+
+function renderUserChatMessages(messages) {
+    const container = document.getElementById('user-chat-messages');
+    container.innerHTML = '';
+    
+    if (messages.length === 0) {
+        container.innerHTML = '<div style="text-align:center; opacity:0.6; padding:1rem; font-size:0.8rem;">Itt kezdheted el a beszélgetést az eladóval.</div>';
+    } else {
+        messages.forEach(msg => {
+            const isMe = msg.senderId === currentUser.id;
+            const el = document.createElement('div');
+            el.className = `message ${isMe ? 'user-message' : 'ai-message'}`;
+            el.style.backgroundColor = isMe ? 'var(--primary-color)' : 'rgba(255,255,255,0.05)';
+            el.style.color = isMe ? '#000' : 'var(--text-color)';
+            el.textContent = msg.content;
+            container.appendChild(el);
+        });
+    }
+    container.scrollTop = container.scrollHeight;
+}
+
+document.getElementById('user-chat-send')?.addEventListener('click', sendUserChatMessage);
+document.getElementById('user-chat-input')?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendUserChatMessage();
+});
+
+async function sendUserChatMessage() {
+    const input = document.getElementById('user-chat-input');
+    const text = input.value.trim();
+    if (!text) return;
+    
+    input.value = '';
+    
+    // Add locally immediately
+    const container = document.getElementById('user-chat-messages');
+    if(container.innerHTML.includes('Itt kezdheted el')) container.innerHTML = '';
+    
+    const el = document.createElement('div');
+    el.className = 'message user-message';
+    el.style.backgroundColor = 'var(--primary-color)';
+    el.style.color = '#000';
+    el.textContent = text;
+    container.appendChild(el);
+    container.scrollTop = container.scrollHeight;
+    
+    try {
+        await fetch(`${API_BASE_URL}/messages`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ 
+                receiverId: activeChatReceiverId, // Can be matched safely on backend
+                adId: activeChatAdId,
+                content: text
+            })
+        });
+    } catch (err) {
+        showToast('Hálózati hiba az üzenet küldésekor', 'error');
+    }
+}
+
+window.openUserChat = openUserChat;
+
+// AI Assistant Action in User Chat
+document.getElementById('user-chat-ai-action')?.addEventListener('click', async () => {
+    const container = document.getElementById('user-chat-messages');
+    
+    // Add simple AI message
+    const elId = 'ai-typing-' + Date.now();
+    const el = document.createElement('div');
+    el.id = elId;
+    el.className = 'message ai-message';
+    el.style.backgroundColor = 'rgba(255,255,255,0.05)';
+    el.innerHTML = '<i>Lunnar AI Asszisztens kapcsolódik...</i>';
+    container.appendChild(el);
+    container.scrollTop = container.scrollHeight;
+    
+    setTimeout(() => {
+        const ad = allCars.find(c => c._id === activeChatAdId || c.id === activeChatAdId);
+        const elRe = document.getElementById(elId);
+        if (elRe) {
+            elRe.innerHTML = `👋 Helló! Én a Lunnar AI Asszisztensed vagyok. Úgy látom az eladó jelenleg nem válaszol. <br><br><b>Amit a hirdetésből tudok a járműről:</b><br>- Típus: ${ad.brand} ${ad.model}<br>- Évjárat: ${ad.year}<br>- Kilométer: ${ad.km} km<br>- Ár: ${formatPrice(ad.price)}<br>- Motor: ${ad.hp} LE, ${ad.fuel}<br><br>Kérdésed van ezekkel kapcsolatban? Tedd fel a fő AI Chat modulban a bal alsó sarokból!`;
+        }
+    }, 1500);
+});
 
 // ===== INIT EVERYTHING =====
 function init() {

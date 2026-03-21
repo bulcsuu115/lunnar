@@ -611,8 +611,11 @@
                                 </div>
                                 <div class="input-group">
                                     <label><span class="icon">📅</span> Évjárat</label>
-                                    <input type="number" id="sub-year" required placeholder="2018" min="1950"
-                                        max="2026">
+                                    <input type="number" id="sub-year" required placeholder="2018" min="1950" max="2026">
+                                </div>
+                                <div class="input-group">
+                                    <label><span class="icon">🔍</span> Alvázszám (VIN)</label>
+                                    <input type="text" id="sub-vin" placeholder="WBA1234567...">
                                 </div>
                                 <div class="input-group">
                                     <label><span class="input-icon">🏎️</span> Kivitel</label>
@@ -818,6 +821,12 @@
                                     autocomplete="email">
                             </div>
                             <div class="input-group">
+                                <label for="reg-phone">
+                                    <span class="input-icon">📞</span> Telefonszám
+                                </label>
+                                <input type="tel" id="reg-phone" placeholder="+36 30 123 4567" autocomplete="tel">
+                            </div>
+                            <div class="input-group">
                                 <label for="reg-password">
                                     <span class="input-icon">🔒</span> Jelszó
                                 </label>
@@ -989,8 +998,12 @@
                                 <div class="avatar-glow"></div>
                             </div>
                             <div class="profile-user-info">
-                                <h2 id="profile-username">FELHASZNÁLÓNÉV</h2>
+                                <h2 id="profile-username">FELHASZNÁLÓNÉV <span class="verified-badge" id="profile-verified-badge" style="display:none;font-size:1rem;color:#10b981;" title="Ellenőrzött eladó">☑️</span></h2>
                                 <p id="profile-email" class="text-muted">email@pelda.hu</p>
+                                <div class="profile-rating" id="profile-rating-display" style="font-size:0.85rem; margin-top:0.3rem; display:none;">
+                                    <span style="color:#d97706;">★</span> <span id="profile-rating-value">0.0</span> <span class="text-muted" id="profile-rating-count">(0 megítélés)</span>
+                                </div>
+                                <button id="verify-account-btn" class="cta-mini" style="margin-top:0.8rem; font-size:0.75rem; padding: 4px 8px; width:100%; display:none;">Fiók hitelesítése (SMS szimuláció)</button>
                             </div>
                         </div>
 
@@ -1020,6 +1033,17 @@
                     <main class="profile-content">
                         <!-- My Listings Tab -->
                         <div class="profile-tab-content active" id="profile-tab-my-listings">
+                            <div class="profile-stats-dashboard glass-premium" style="display:flex; justify-content:space-around; align-items:center; padding:1.5rem; margin-bottom:1.5rem; border-radius:12px;">
+                                <div style="text-align:center;">
+                                    <h4 style="margin:0; font-size:0.85rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Összes Megtekintés</h4>
+                                    <span id="stat-total-views" style="font-size:2rem; font-weight:bold; color:var(--accent-color); font-family:var(--font-heading);">0</span>
+                                </div>
+                                <div style="height:40px; width:1px; background:var(--border-color);"></div>
+                                <div style="text-align:center;">
+                                    <h4 style="margin:0; font-size:0.85rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Kedvencekben</h4>
+                                    <span id="stat-total-favs" style="font-size:2rem; font-weight:bold; color:#ef4444; font-family:var(--font-heading);">0</span>
+                                </div>
+                            </div>
                             <div class="content-header">
                                 <h3>SAJÁT HIRDETÉSEIM</h3>
                                 <div class="profile-search-container">
@@ -1084,6 +1108,48 @@
                 <!-- JS renders pending ads here -->
             </div>
         </section>
+
+        <!-- ===== USER CHAT MODAL ===== -->
+        <div class="modal-overlay" id="user-chat-modal">
+            <div class="modal-content" style="max-width: 600px; height: 85vh; display: flex; flex-direction: column; padding:0; background: var(--main-bg); overflow:hidden;">
+                <div class="modal-header" style="padding: 1.2rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: var(--secondary-bg);">
+                    <div>
+                        <h3 id="chat-partner-name" style="margin:0 0 0.3rem 0; font-family:var(--font-heading); font-size:1.2rem;">Eladó neve</h3>
+                        <p id="chat-ad-title" style="margin:0; font-size:0.85rem; color:var(--text-muted);">Autó modell betöltése...</p>
+                    </div>
+                    <button class="modal-close" id="user-chat-close" style="position:static; margin-left:1rem;">&times;</button>
+                </div>
+                <!-- messages container -->
+                <div id="chat-message-list" style="flex: 1; overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 0.8rem; background: var(--main-bg);">
+                    <!-- messages populated by JS -->
+                </div>
+                <!-- input area -->
+                <div class="chat-input-area" style="padding: 1rem; border-top: 1px solid var(--border-color); background: var(--secondary-bg); display:flex; gap:0.5rem; align-items:center;">
+                    <button id="chat-ask-ai-btn" class="cta-mini" title="Lunnar AI kérdezése (ha az eladó nem elérhető)" style="padding:0.6rem 0.8rem; border-radius:24px; font-weight:bold; letter-spacing:0; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);">✨ AI</button>
+                    <input type="text" id="chat-input-text" placeholder="Írj üzenetet az eladónak..." style="flex:1; border-radius: 24px; padding: 0.8rem 1.2rem; border: 1px solid var(--border-color); background: var(--main-bg); color: var(--text-color); font-size:0.95rem;">
+                    <button id="chat-send-btn" class="cta-button primary" style="padding: 0.8rem 1.2rem; border-radius:24px; min-width:unset;">➤</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== SELLER RATING MODAL ===== -->
+        <div class="modal-overlay" id="rating-modal">
+            <div class="modal-content auth-modal-content" style="max-width: 400px; text-align: center; padding: 2.5rem 2rem;">
+                <button class="modal-close" id="rating-close">&times;</button>
+                <div class="modal-body-inner">
+                    <h2 class="modal-title" style="margin-bottom:0.5rem;">ELADÓ ÉRTÉKELÉSE</h2>
+                    <p class="modal-subtitle">Milyen volt a tapasztalata <strong id="rating-seller-name" style="color:var(--text-color);">Eladó neve</strong> felhasználóval?</p>
+                    <div class="star-rating-input" id="star-rating-input" style="font-size: 3rem; cursor: pointer; color: var(--border-color); margin: 1.5rem 0; display:flex; justify-content:center; gap:0.5rem;">
+                        <span data-value="1">★</span>
+                        <span data-value="2">★</span>
+                        <span data-value="3">★</span>
+                        <span data-value="4">★</span>
+                        <span data-value="5">★</span>
+                    </div>
+                    <button id="submit-rating-btn" class="cta-button primary" disabled style="width:100%; margin-top:1rem;">ÉRTÉKELÉS MENTÉSE</button>
+                </div>
+            </div>
+        </div>
 
         <!-- ===== AI CHATBOT WIDGET ===== -->
         <div id="ai-chat-widget" class="ai-chat-widget">

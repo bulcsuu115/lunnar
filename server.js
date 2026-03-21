@@ -75,6 +75,12 @@ const adSchema = new mongoose.Schema({
     isPremium: { type: Boolean, default: false },
     owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'approved' },
+    comments: [{
+        userId: String,
+        username: String,
+        text: String,
+        createdAt: { type: Date, default: Date.now }
+    }],
     createdAt: { type: Date, default: Date.now }
 });
 
@@ -277,6 +283,28 @@ app.post('/api/ads/:id/premium', authenticateToken, async (req, res) => {
         ad.isPremium = true;
         await ad.save();
         res.json({ message: 'Hirdetés kiemelve!' });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Post Ad Comment
+app.post('/api/ads/:id/comment', authenticateToken, async (req, res) => {
+    try {
+        const { text } = req.body;
+        if (!text || text.trim().length === 0) return res.status(400).json({ message: 'Üres komment' });
+
+        const ad = await Ad.findById(req.params.id);
+        if (!ad) return res.status(404).json({ message: 'Hirdetés nem található' });
+
+        ad.comments.push({
+            userId: req.user.userId,
+            username: req.user.username,
+            text: text.trim()
+        });
+
+        await ad.save();
+        res.status(201).json({ message: 'Komment sikeresen hozzáadva', comments: ad.comments });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

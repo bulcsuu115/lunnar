@@ -449,7 +449,7 @@ function generateCars(count = 12) {
 
 let allCars = [];
 let filteredCars = [];
-let favorites = JSON.parse(localStorage.getItem('lunnarFavorites') || '[]');
+let favorites = JSON.parse(localStorage.getItem('lunnarFavorites') || '[]').map(String);
 let compareList = []; // Array of car objects to compare
 let currentUser = JSON.parse(localStorage.getItem('lunnarUser') || 'null');
 let token = localStorage.getItem('lunnarToken');
@@ -1149,11 +1149,12 @@ function renderAdDetail(id) {
         return;
     }
 
-    const isFav = favorites.includes(car.id);
+    const isFav = favorites.includes(String(car._id || car.id));
     const images = (car.images && car.images.length > 0) ? car.images : [car.img];
     const hasMultiple = images.length > 1;
 
     container.innerHTML = `
+        <div class="dynamic-glow-container"></div>
         <div class="ad-full-detail">
             <a href="#home" class="back-link">← Vissza a kereséshez</a>
             <div class="detail-header-flex">
@@ -1163,7 +1164,7 @@ function renderAdDetail(id) {
                 </div>
                 <div class="detail-price-area">
                     <div class="detail-price">${formatPrice(car.price)}</div>
-                    <button class="car-fav big ${isFav ? 'active' : ''}" id="detail-fav-btn" data-fav-id="${car.id}">${isFav ? '❤️ Kedvenc' : '🤍 Kedvencekhez'}</button>
+                    <button class="car-fav big ${isFav ? 'active' : ''}" id="detail-fav-btn" data-fav-id="${car._id || car.id}">${isFav ? '❤️ Kedvenc' : '🤍 Kedvencekhez'}</button>
                 </div>
             </div>
 
@@ -1212,9 +1213,9 @@ function renderAdDetail(id) {
                         ` : `
                             <button class="cta-button primary" style="width:100%;">📞 ELADÓ HÍVÁSA</button>
                         `}
-                        <button class="cta-button secondary" onclick="openUserChat('${car._id || car.id}', '${car.seller || 'Eladó'}', '${car.brand} ${car.model}')" style="width:100%;">💬 CHAT AZ ELADÓVAL</button>
+                        <button class="cta-button secondary" onclick="openUserChat('${car._id || car.id}', '${car.owner || car.ownerId || ''}', '${car.seller || 'Eladó'}', '${car.brand} ${car.model}')" style="width:100%;">💬 CHAT AZ ELADÓVAL</button>
                         ${token && currentUser ? `
-                            <button class="cta-mini" onclick="openRatingModal('${car.ownerId || car.seller}', '${car.seller || 'Eladó'}')" style="width:100%; padding:0.8rem; border:1px solid var(--border-color); background:transparent; color:var(--text-color); font-weight:bold; letter-spacing:1px;">⭐ ELADÓ ÉRTÉKELÉSE</button>
+                            <button class="cta-mini" onclick="openRatingModal('${car.owner || car.ownerId || ''}', '${car.seller || 'Eladó'}')" style="width:100%; padding:0.8rem; border:1px solid var(--border-color); background:transparent; color:var(--text-color); font-weight:bold; letter-spacing:1px;">⭐ ELADÓ ÉRTÉKELÉSE</button>
                         ` : ''}
                         ${car.email ? `<p style="margin-top: 0.5rem; text-align:center; opacity: 0.7; font-size: 0.9rem;">📧 ${car.email}</p>` : ''}
                     </div>
@@ -1226,6 +1227,29 @@ function renderAdDetail(id) {
                 <div class="price-chart-container">
                     <canvas id="priceChartCanvas"></canvas>
                 </div>
+            </div>
+
+            <div class="ad-comments">
+                <h3>KÖZÖSSÉGI FEED (${car.comments ? car.comments.length : 0} hozzászólás)</h3>
+                <div class="comment-list" id="comment-list-container">
+                    ${(car.comments || []).map(c => `
+                        <div class="comment-item">
+                            <div class="comment-avatar">${c.username.charAt(0).toUpperCase()}</div>
+                            <div class="comment-content">
+                                <div class="comment-header">
+                                    <span>${c.username}</span>
+                                    <span>${new Date(c.createdAt).toLocaleDateString('hu-HU', {year:'numeric', month:'short', day:'numeric'})}</span>
+                                </div>
+                                <div class="comment-text">${c.text}</div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                ${token && currentUser ? `
+                <div class="comment-input-area">
+                    <textarea id="new-comment-text" placeholder="Oszd meg a véleményed vagy tedd fel a kérdésed a közösségnek..."></textarea>
+                    <button class="cta-button primary" onclick="submitComment('${car._id || car.id}')">KÜLDÉS</button>
+                </div>` : '<p style="margin-top: 1rem; opacity: 0.7;">A hozzászóláshoz be kell jelentkezned.</p>'}
             </div>
         </div>
         `;
@@ -1327,6 +1351,11 @@ function renderAdDetail(id) {
     if (car._id || car.id) {
         fetch(`${API_BASE_URL}/ads/${car._id || car.id}/view`, { method: 'POST' }).catch(e => console.log('View stat error ignored', e));
     }
+
+    // Dynamic Glow Extraction
+    extractDominantColor(images[0]).then(color => {
+        document.documentElement.style.setProperty('--dynamic-glow-color', color);
+    });
 }
 
 function renderPriceChart(history) {
@@ -3515,21 +3544,28 @@ function openRatingModal(sellerId, sellerName) {
     document.getElementById('rating-seller-name').textContent = sellerName;
     
     // Clear previous stars
-    const stars = modal.querySelectorAll('.star');
-    stars.forEach(s => s.classList.remove('active'));
+    const stars = modal.querySelectorAll('#star-rating-input span');
+    stars.forEach(s => {
+        s.classList.remove('active');
+        s.style.color = 'var(--border-color)';
+    });
     
+    const submitBtn = document.getElementById('submit-rating-btn');
+    submitBtn.disabled = true;
+
     let selectedRating = 0;
-    stars.forEach(star => {
+    stars.forEach((star, index) => {
         star.onclick = () => {
-            selectedRating = parseInt(star.dataset.val);
-            stars.forEach(s => s.classList.remove('active'));
+            selectedRating = parseInt(star.dataset.value);
+            stars.forEach(s => { s.classList.remove('active'); s.style.color = 'var(--border-color)'; });
             for(let i=0; i<selectedRating; i++) {
                 stars[i].classList.add('active');
+                stars[i].style.color = '#fbbf24'; // Arany szín a csillagoknak
             }
+            submitBtn.disabled = false;
         };
     });
 
-    const submitBtn = document.getElementById('submit-rating-btn');
     submitBtn.onclick = async () => {
         if (selectedRating === 0) {
             showToast('Kérjük, válassz csillagot!', 'error');
@@ -3600,7 +3636,7 @@ window.openRatingModal = openRatingModal;
 let activeChatAdId = null;
 let activeChatReceiverId = null;
 
-function openUserChat(adId, sellerName, paramAdTitle) {
+function openUserChat(adId, receiverId, sellerName, paramAdTitle) {
     if (!token || !currentUser) {
         showToast('A chat használatához be kell jelentkezned!', 'error');
         return;
@@ -3609,7 +3645,7 @@ function openUserChat(adId, sellerName, paramAdTitle) {
     if (!modal) return;
     
     activeChatAdId = adId;
-    activeChatReceiverId = sellerName; // We pass the seller name as identifier or an actual ID
+    activeChatReceiverId = receiverId; // Helyes ObjectID mostantól
     
     document.getElementById('user-chat-title').textContent = paramAdTitle;
     document.getElementById('user-chat-seller-name').textContent = sellerName;
@@ -3729,13 +3765,85 @@ document.getElementById('user-chat-ai-action')?.addEventListener('click', async 
     }, 1500);
 });
 
+// ===== VISUAL EXTRA & SOCIAL FEATURES =====
+async function submitComment(adId) {
+    const textInput = document.getElementById('new-comment-text');
+    if(!textInput) return;
+    const text = textInput.value.trim();
+    if(!text) {
+        showToast('Kérlek írj be egy hozzászólást', 'error');
+        return;
+    }
+
+    const btn = textInput.nextElementSibling;
+    btn.disabled = true;
+    btn.textContent = 'KÜLDÉS...';
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/ads/${adId}/comment`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ text })
+        });
+        const data = await res.json();
+        
+        if (res.ok) {
+            showToast('Hozzászólás elküldve!', 'success');
+            // Refresh ad
+            const adIndex = allCars.findIndex(c => c._id === adId || c.id === adId);
+            if(adIndex > -1) {
+                allCars[adIndex].comments = data.comments;
+            }
+            renderAdDetail(adId);
+        } else {
+            showToast(data.message || 'Hiba a küldés során', 'error');
+        }
+    } catch(err) {
+        showToast('Hálózati hiba', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'KÜLDÉS';
+    }
+}
+
+function extractDominantColor(imageSrc) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = "Anonymous";
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 50;
+            canvas.height = 50;
+            try {
+                ctx.drawImage(img, 0, 0, 50, 50);
+                const data = ctx.getImageData(0, 0, 50, 50).data;
+                let r=0,g=0,b=0, count=0;
+                for(let i=0; i<data.length; i+=4) {
+                    if (data[i+3] > 128) {
+                        r += data[i]; g += data[i+1]; b += data[i+2]; count++;
+                    }
+                }
+                if(count > 0) resolve(`rgba(${Math.round(r/count)}, ${Math.round(g/count)}, ${Math.round(b/count)}, 0.4)`);
+                else resolve('transparent');
+            } catch(e) {
+                resolve('transparent');
+            }
+        };
+        img.onerror = () => resolve('transparent');
+        img.src = imageSrc;
+    });
+}
+
+window.submitComment = submitComment;
+
 // ===== INIT EVERYTHING =====
-function init() {
+async function init() {
     initStars();
     typeSubtitle();
     initNeural();
     initBrands();
-    fetchAds();
+    await fetchAds();
     initSearch();
     initModal();
     initSubmission();

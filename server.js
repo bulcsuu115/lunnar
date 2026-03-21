@@ -42,10 +42,17 @@ const userSchema = new mongoose.Schema({
     totalRatings: { type: Number, default: 0 },
     ratings: [{
         raterId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        raterName: String,
         score: Number,
+        comment: String,
         createdAt: { type: Date, default: Date.now }
     }],
     favorites: [{ type: String }], // Array of ad IDs (or static IDs)
+    savedSearches: [{
+        name: String,
+        params: mongoose.Schema.Types.Mixed,
+        createdAt: { type: Date, default: Date.now }
+    }],
     createdAt: { type: Date, default: Date.now }
 });
 
@@ -163,6 +170,11 @@ app.post('/api/ads', async (req, res) => {
         console.log('[ADS] Új hirdetés beérkezés...');
         const adData = { ...req.body };
 
+        // Limit images to 10
+        if (adData.images && adData.images.length > 10) {
+            return res.status(400).json({ message: 'Maximum 10 kép engedélyezett hirdetésenként.' });
+        }
+
         // Remove fields that are not in the schema / could conflict with MongoDB
         delete adData.id;
         delete adData._id;
@@ -192,6 +204,36 @@ app.post('/api/ads', async (req, res) => {
         res.status(201).json(newAd);
     } catch (err) {
         console.error('[ADS] HIBA a mentés során:', err.message);
+        res.status(400).json({ message: err.message });
+    }
+});
+
+// Update Ad
+app.patch('/api/ads/:id', authenticateToken, async (req, res) => {
+    try {
+        const ad = await Ad.findById(req.params.id);
+        if (!ad) return res.status(404).json({ message: 'Hirdetés nem található' });
+        
+        // Ownership check
+        if (ad.owner && ad.owner.toString() !== req.user.userId) {
+            return res.status(403).json({ message: 'Nincs jogosultságod a hirdetés módosításához' });
+        }
+
+        const adData = { ...req.body };
+
+        // Limit images to 10
+        if (adData.images && adData.images.length > 10) {
+            return res.status(400).json({ message: 'Maximum 10 kép engedélyezett hirdetésenként.' });
+        }
+
+        // Clean up data
+        delete adData.owner;
+        delete adData.createdAt;
+
+        Object.assign(ad, adData);
+        const updatedAd = await ad.save();
+        res.json(updatedAd);
+    } catch (err) {
         res.status(400).json({ message: err.message });
     }
 });
@@ -231,7 +273,7 @@ app.post('/api/auth/verify', authenticateToken, async (req, res) => {
 // Rate seller
 app.post('/api/users/:id/rate', authenticateToken, async (req, res) => {
     try {
-        const { score } = req.body; // 1 to 5
+        const { score, comment } = req.body; // 1 to 5
         if (score < 1 || score > 5) return res.status(400).json({ message: 'Érvénytelen pontszám' });
         
         const seller = await User.findById(req.params.id);
@@ -240,7 +282,12 @@ app.post('/api/users/:id/rate', authenticateToken, async (req, res) => {
         // Prevent self rating
         if (seller._id.toString() === req.user.userId) return res.status(400).json({ message: 'Saját magadat nem értékelheted' });
 
-        seller.ratings.push({ raterId: req.user.userId, score });
+        seller.ratings.push({ 
+            raterId: req.user.userId,
+            raterName: req.user.username,
+            score,
+            comment: comment ? comment.trim() : ''
+        });
         seller.totalRatings += 1;
         const totalScore = seller.ratings.reduce((acc, r) => acc + r.score, 0);
         seller.sellerRating = totalScore / seller.totalRatings;
@@ -255,7 +302,7 @@ app.post('/api/users/:id/rate', authenticateToken, async (req, res) => {
 // Get user profile summary
 app.get('/api/users/:id/profile', async (req, res) => {
     try {
-        const user = await User.findById(req.params.id).select('username phone isVerified sellerRating totalRatings createdAt');
+        const user = await User.findById(req.params.id).select('username phone isVerified sellerRating totalRatings ratings createdAt');
         if (!user) return res.status(404).json({ message: 'Felhasználó nem található' });
         res.json(user);
     } catch (err) {
@@ -404,6 +451,45 @@ app.delete('/api/admin/ads/:id', async (req, res) => {
         res.json({ message: 'Hirdetés törölve' });
     } catch (err) {
         res.status(500).json({ message: err.message });
+    }
+});
+
+// ===== SAVED SEARCHES ROUTES =====
+
+// Get saved searches
+app.get('/api/user/saved-searches', authenticateToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.userId);
+        res.json({ savedSearches: user.savedSearches || [] });
+    } catch (err) {
+        res.status(500).json({ message: 'Error fetching saved searches' });
+    }
+});
+
+// Add saved search
+app.post('/api/user/saved-searches', authenticateToken, async (req, res) => {
+    const { name, params } = req.body;
+    if (!name || !params) return res.status(400).json({ message: 'Name and params are required' });
+
+    try {
+        const user = await User.findById(req.user.userId);
+        user.savedSearches.push({ name, params });
+        await user.save();
+        res.status(201).json({ message: 'Search saved successfully', savedSearches: user.savedSearches });
+    } catch (err) {
+        res.status(500).json({ message: 'Error saving search' });
+    }
+});
+
+// Delete saved search
+app.delete('/api/user/saved-searches/:id', authenticateToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.userId);
+        user.savedSearches = user.savedSearches.filter(s => s._id.toString() !== req.params.id);
+        await user.save();
+        res.json({ message: 'Search deleted successfully', savedSearches: user.savedSearches });
+    } catch (err) {
+        res.status(500).json({ message: 'Error deleting search' });
     }
 });
 

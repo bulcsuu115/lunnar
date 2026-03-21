@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
     <title>Lunnar | Prémium Használtautó Kereső</title>
     <meta name="description"
         content="A legfejlettebb használtautó kereső platform. Válaszd ki álmaid autóját egyszerűen és gyorsan.">
@@ -90,7 +90,7 @@
             <!-- ===== HERO + SEARCH ===== -->
             <section id="hero">
                 <canvas id="starfield"></canvas>
-                
+
                 <div class="hero-content">
                     <div class="logo-container">
                         <img src="feher logo (1).png" alt="Lunnar Logo" class="main-logo">
@@ -100,6 +100,19 @@
                     <p class="subtitle" id="hero-subtitle"></p>
 
                     <div class="search-container">
+                        <div id="quick-saved-searches-container" class="glass-premium"
+                            style="display:none; margin-bottom:1.5rem; padding:12px; border-radius:12px; border:1px solid rgba(255,255,255,0.05);">
+                            <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                                <span class="icon" style="font-size:1.2rem;">📂</span>
+                                <span
+                                    style="font-size:0.85rem; font-weight:bold; letter-spacing:1px; opacity:0.8;">GYORSBETÖLTÉS</span>
+                            </div>
+                            <select id="quick-saved-searches"
+                                onchange="if(this.value) loadSavedSearch(JSON.parse(this.value))"
+                                style="width:100%; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); padding:8px 12px; border-radius:6px; color:var(--text-color); cursor:pointer; font-size:0.9rem;">
+                                <option value="">-- Válassz egy mentett keresést --</option>
+                            </select>
+                        </div>
                         <form id="car-search-form">
                             <div class="search-grid">
                                 <div class="input-group">
@@ -466,10 +479,13 @@
                         <label for="sort-select">Rendezés:</label>
                         <select id="sort-select">
                             <option value="newest">Legújabb</option>
-                            <option value="price-asc">Ár ↑</option>
-                            <option value="price-desc">Ár ↓</option>
-                            <option value="km-asc">Km ↑</option>
-                            <option value="year-desc">Legújabb évjárat</option>
+                            <option value="price-asc">Vételár szerint növekvő sorrend</option>
+                            <option value="price-desc">Vételár szerint csökkenő sorrend</option>
+                            <option value="km-asc">Futott km szerint növekvő sorrend</option>
+                            <option value="km-desc">Futott km szerint csökkenő sorrend</option>
+                            <option value="year-asc">Évjárat szerint növekvő sorrend</option>
+                            <option value="year-desc">Évjárat szerint csökkenő sorrend</option>
+                            <option value="hp-desc">Teljesítmény szerint csökkenő sorrend</option>
                         </select>
                     </div>
                 </div>
@@ -612,7 +628,8 @@
                                 </div>
                                 <div class="input-group">
                                     <label><span class="icon">📅</span> Évjárat</label>
-                                    <input type="number" id="sub-year" required placeholder="2018" min="1950" max="2026">
+                                    <input type="number" id="sub-year" required placeholder="2018" min="1950"
+                                        max="2026">
                                 </div>
                                 <div class="input-group">
                                     <label><span class="icon">🔍</span> Alvázszám (VIN)</label>
@@ -999,12 +1016,18 @@
                                 <div class="avatar-glow"></div>
                             </div>
                             <div class="profile-user-info">
-                                <h2 id="profile-username">FELHASZNÁLÓNÉV <span class="verified-badge" id="profile-verified-badge" style="display:none;font-size:1rem;color:#10b981;" title="Ellenőrzött eladó">☑️</span></h2>
+                                <h2 id="profile-username">FELHASZNÁLÓNÉV <span class="verified-badge"
+                                        id="profile-verified-badge" style="display:none;font-size:1rem;color:#10b981;"
+                                        title="Ellenőrzött eladó">☑️</span></h2>
                                 <p id="profile-email" class="text-muted">email@pelda.hu</p>
-                                <div class="profile-rating" id="profile-rating-display" style="font-size:0.85rem; margin-top:0.3rem; display:none;">
-                                    <span style="color:#d97706;">★</span> <span id="profile-rating-value">0.0</span> <span class="text-muted" id="profile-rating-count">(0 megítélés)</span>
+                                <div class="profile-rating" id="profile-rating-display"
+                                    style="font-size:0.85rem; margin-top:0.3rem; display:none;">
+                                    <span style="color:#d97706;">★</span> <span id="profile-rating-value">0.0</span>
+                                    <span class="text-muted" id="profile-rating-count">(0 megítélés)</span>
                                 </div>
-                                <button id="verify-account-btn" class="cta-mini" style="margin-top:0.8rem; font-size:0.75rem; padding: 4px 8px; width:100%; display:none;">Fiók hitelesítése (SMS szimuláció)</button>
+                                <button id="verify-account-btn" class="cta-mini"
+                                    style="margin-top:0.8rem; font-size:0.75rem; padding: 4px 8px; width:100%; display:none;">Fiók
+                                    hitelesítése (SMS)</button>
                             </div>
                         </div>
 
@@ -1018,6 +1041,10 @@
                                 <span class="icon">❤️</span>
                                 <span>Kedvenceim</span>
                                 <span class="badge-mini" id="stat-favs-count">0</span>
+                            </button>
+                            <button class="profile-tab-btn" data-profile-tab="my-searches">
+                                <span class="icon">📂</span>
+                                <span>Kereséseim</span>
                             </button>
                             <button class="profile-tab-btn" data-profile-tab="settings">
                                 <span class="icon">⚙️</span>
@@ -1034,15 +1061,22 @@
                     <main class="profile-content">
                         <!-- My Listings Tab -->
                         <div class="profile-tab-content active" id="profile-tab-my-listings">
-                            <div class="profile-stats-dashboard glass-premium" style="display:flex; justify-content:space-around; align-items:center; padding:1.5rem; margin-bottom:1.5rem; border-radius:12px;">
+                            <div class="profile-stats-dashboard glass-premium"
+                                style="display:flex; justify-content:space-around; align-items:center; padding:1.5rem; margin-bottom:1.5rem; border-radius:12px;">
                                 <div style="text-align:center;">
-                                    <h4 style="margin:0; font-size:0.85rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Összes Megtekintés</h4>
-                                    <span id="stat-total-views" style="font-size:2rem; font-weight:bold; color:var(--accent-color); font-family:var(--font-heading);">0</span>
+                                    <h4
+                                        style="margin:0; font-size:0.85rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">
+                                        Összes Megtekintés</h4>
+                                    <span id="stat-total-views"
+                                        style="font-size:2rem; font-weight:bold; color:var(--accent-color); font-family:var(--font-heading);">0</span>
                                 </div>
                                 <div style="height:40px; width:1px; background:var(--border-color);"></div>
                                 <div style="text-align:center;">
-                                    <h4 style="margin:0; font-size:0.85rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Kedvencekben</h4>
-                                    <span id="stat-total-favs" style="font-size:2rem; font-weight:bold; color:#ef4444; font-family:var(--font-heading);">0</span>
+                                    <h4
+                                        style="margin:0; font-size:0.85rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">
+                                        Kedvencekben</h4>
+                                    <span id="stat-total-favs"
+                                        style="font-size:2rem; font-weight:bold; color:#ef4444; font-family:var(--font-heading);">0</span>
                                 </div>
                             </div>
                             <div class="content-header">
@@ -1067,6 +1101,18 @@
                             </div>
                             <div id="my-favorites-list" class="car-grid">
                                 <!-- Favorited cars rendered here -->
+                            </div>
+                        </div>
+
+                        <!-- Saved Searches Tab -->
+                        <div class="profile-tab-content" id="profile-tab-my-searches">
+                            <div class="content-header">
+                                <h3>MENTETT KERESÉSEIM</h3>
+                                <div class="header-line"></div>
+                            </div>
+                            <div id="my-searches-list" class="saved-searches-grid"
+                                style="display:grid; gap:1rem; margin-top:2rem;">
+                                <!-- Saved searches rendered here -->
                             </div>
                         </div>
 
@@ -1112,42 +1158,60 @@
 
         <!-- ===== USER CHAT MODAL ===== -->
         <div class="modal-overlay" id="user-chat-modal">
-            <div class="modal-content" style="max-width: 600px; height: 85vh; display: flex; flex-direction: column; padding:0; background: var(--main-bg); overflow:hidden;">
-                <div class="modal-header" style="padding: 1.2rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: var(--secondary-bg);">
+            <div class="modal-content"
+                style="max-width: 600px; height: 85vh; display: flex; flex-direction: column; padding:0; background: var(--main-bg); overflow:hidden;">
+                <div class="modal-header"
+                    style="padding: 1.2rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: var(--secondary-bg);">
                     <div>
-                        <h3 id="chat-partner-name" style="margin:0 0 0.3rem 0; font-family:var(--font-heading); font-size:1.2rem;">Eladó neve</h3>
-                        <p id="chat-ad-title" style="margin:0; font-size:0.85rem; color:var(--text-muted);">Autó modell betöltése...</p>
+                        <h3 id="chat-partner-name"
+                            style="margin:0 0 0.3rem 0; font-family:var(--font-heading); font-size:1.2rem;">Eladó neve
+                        </h3>
+                        <p id="chat-ad-title" style="margin:0; font-size:0.85rem; color:var(--text-muted);">Autó modell
+                            betöltése...</p>
                     </div>
-                    <button class="modal-close" id="user-chat-close" style="position:static; margin-left:1rem;">&times;</button>
+                    <button class="modal-close" id="user-chat-close"
+                        style="position:static; margin-left:1rem;">&times;</button>
                 </div>
                 <!-- messages container -->
-                <div id="chat-message-list" style="flex: 1; overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 0.8rem; background: var(--main-bg);">
+                <div id="chat-message-list"
+                    style="flex: 1; overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 0.8rem; background: var(--main-bg);">
                     <!-- messages populated by JS -->
                 </div>
                 <!-- input area -->
-                <div class="chat-input-area" style="padding: 1rem; border-top: 1px solid var(--border-color); background: var(--secondary-bg); display:flex; gap:0.5rem; align-items:center;">
-                    <button id="chat-ask-ai-btn" class="cta-mini" title="Lunnar AI kérdezése (ha az eladó nem elérhető)" style="padding:0.6rem 0.8rem; border-radius:24px; font-weight:bold; letter-spacing:0; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);">✨ AI</button>
-                    <input type="text" id="chat-input-text" placeholder="Írj üzenetet az eladónak..." style="flex:1; border-radius: 24px; padding: 0.8rem 1.2rem; border: 1px solid var(--border-color); background: var(--main-bg); color: var(--text-color); font-size:0.95rem;">
-                    <button id="chat-send-btn" class="cta-button primary" style="padding: 0.8rem 1.2rem; border-radius:24px; min-width:unset;">➤</button>
+                <div class="chat-input-area"
+                    style="padding: 1rem; border-top: 1px solid var(--border-color); background: var(--secondary-bg); display:flex; gap:0.5rem; align-items:center;">
+                    <button id="chat-ask-ai-btn" class="cta-mini" title="Lunnar AI kérdezése (ha az eladó nem elérhető)"
+                        style="padding:0.6rem 0.8rem; border-radius:24px; font-weight:bold; letter-spacing:0; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);">✨
+                        AI</button>
+                    <input type="text" id="chat-input-text" placeholder="Írj üzenetet az eladónak..."
+                        style="flex:1; border-radius: 24px; padding: 0.8rem 1.2rem; border: 1px solid var(--border-color); background: var(--main-bg); color: var(--text-color); font-size:0.95rem;">
+                    <button id="chat-send-btn" class="cta-button primary"
+                        style="padding: 0.8rem 1.2rem; border-radius:24px; min-width:unset;">➤</button>
                 </div>
             </div>
         </div>
 
         <!-- ===== SELLER RATING MODAL ===== -->
         <div class="modal-overlay" id="rating-modal">
-            <div class="modal-content auth-modal-content" style="max-width: 400px; text-align: center; padding: 2.5rem 2rem;">
+            <div class="modal-content auth-modal-content"
+                style="max-width: 400px; text-align: center; padding: 2.5rem 2rem;">
                 <button class="modal-close" id="rating-close">&times;</button>
                 <div class="modal-body-inner">
                     <h2 class="modal-title" style="margin-bottom:0.5rem;">ELADÓ ÉRTÉKELÉSE</h2>
-                    <p class="modal-subtitle">Milyen volt a tapasztalata <strong id="rating-seller-name" style="color:var(--text-color);">Eladó neve</strong> felhasználóval?</p>
-                    <div class="star-rating-input" id="star-rating-input" style="font-size: 3rem; cursor: pointer; color: var(--border-color); margin: 1.5rem 0; display:flex; justify-content:center; gap:0.5rem;">
+                    <p class="modal-subtitle">Milyen volt a tapasztalata <strong id="rating-seller-name"
+                            style="color:var(--text-color);">Eladó neve</strong> felhasználóval?</p>
+                    <div class="star-rating-input" id="star-rating-input"
+                        style="font-size: 3rem; cursor: pointer; color: var(--border-color); margin: 1.5rem 0; display:flex; justify-content:center; gap:0.5rem;">
                         <span data-value="1">★</span>
                         <span data-value="2">★</span>
                         <span data-value="3">★</span>
                         <span data-value="4">★</span>
                         <span data-value="5">★</span>
                     </div>
-                    <button id="submit-rating-btn" class="cta-button primary" disabled style="width:100%; margin-top:1rem;">ÉRTÉKELÉS MENTÉSE</button>
+                    <textarea id="rating-comment" placeholder="Opcionális: írjon pár szót az eladóról..."
+                        style="width:100%; height:80px; margin-bottom:1rem; padding:0.8rem; border-radius:12px; border:1px solid var(--border-color); background:var(--main-bg); color:var(--text-color); resize:vertical; font-family:var(--font-body);"></textarea>
+                    <button id="submit-rating-btn" class="cta-button primary" disabled style="width:100%;">ÉRTÉKELÉS
+                        MENTÉSE</button>
                 </div>
             </div>
         </div>
@@ -1233,6 +1297,15 @@
                 <button id="sidebar-search-close" class="sidebar-close-btn">&times;</button>
             </div>
             <div class="sidebar-search-body">
+                <div id="sidebar-quick-searches-container" class="glass-premium" style="display:none; margin-bottom:1.5rem; padding:12px; border-radius:12px; border:1px solid rgba(255,255,255,0.05);">
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                        <span class="icon" style="font-size:1.1rem;">📂</span>
+                        <span style="font-size:0.75rem; font-weight:bold; letter-spacing:1px; opacity:0.8;">GYORSBETÖLTÉS</span>
+                    </div>
+                    <select id="sidebar-quick-saved-searches" onchange="if(this.value) { loadSavedSearch(JSON.parse(this.value)); closeSidebar(); }" style="width:100%; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); padding:8px 10px; border-radius:6px; color:var(--text-color); cursor:pointer; font-size:0.85rem;">
+                        <option value="">-- Keresés betöltése --</option>
+                    </select>
+                </div>
                 <div class="sidebar-input-group">
                     <label>Márka</label>
                     <select id="sidebar-brand">

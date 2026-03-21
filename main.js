@@ -450,7 +450,7 @@ function generateCars(count = 12) {
 let allCars = [];
 let filteredCars = [];
 let favorites = JSON.parse(localStorage.getItem('lunnarFavorites') || '[]').map(String);
-let compareList = []; // Array of car objects to compare
+let compareList = JSON.parse(localStorage.getItem('lunnarCompareList') || '[]');
 let currentUser = JSON.parse(localStorage.getItem('lunnarUser') || 'null');
 let token = localStorage.getItem('lunnarToken');
 let editingAdId = null;
@@ -954,7 +954,10 @@ function sortCars() {
         case 'price-asc': filteredCars.sort((a, b) => a.price - b.price); break;
         case 'price-desc': filteredCars.sort((a, b) => b.price - a.price); break;
         case 'km-asc': filteredCars.sort((a, b) => a.km - b.km); break;
+        case 'km-desc': filteredCars.sort((a, b) => b.km - a.km); break;
         case 'year-desc': filteredCars.sort((a, b) => b.year - a.year); break;
+        case 'year-asc': filteredCars.sort((a, b) => a.year - b.year); break;
+        case 'hp-desc': filteredCars.sort((a, b) => (b.hp || 0) - (a.hp || 0)); break;
         default: filteredCars.sort((a, b) => a.daysAgo - b.daysAgo); break;
     }
 }
@@ -1201,7 +1204,12 @@ function renderAdDetail(id) {
                         <div class="spec-item"><span>💎 Állapot</span><strong>${car.condition || '-'}</strong></div>
                         ${car.ccm ? `<div class="spec-item"><span>🔧 Hengerűrtartalom</span><strong>${car.ccm} ccm</strong></div>` : ''}
                         <div class="spec-item"><span>📍 Település</span><strong>${car.city}</strong></div>
-                        ${car.vin ? `<div class="spec-item" style="grid-column: 1/-1;"><span>🔍 Alvázszám (VIN)</span><strong>${car.vin}</strong> <button class="cta-mini" onclick="window.open('https://www.carvertical.com/hu/check?vin=${car.vin}', '_blank')" style="padding:2px 8px; font-size:0.7rem; margin-left:10px; background:#005bea; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">Lekérdezés a carVerticalon</button></div>` : ''}
+                        ${car.vin ? `<div class="spec-item" style="grid-column: 1/-1;">
+                            <span>🔍 Alvázszám (VIN)</span><strong>${car.vin}</strong>
+                            <div style="display:inline-block; margin-left:10px;">
+                                <button class="cta-mini" onclick="window.open('https://www.carvertical.com/hu/check?vin=${car.vin}', '_blank')" style="padding:4px 10px; font-size:0.75rem; background:#005bea; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">Lekérdezés a carVerticalon 🛡️</button>
+                            </div>
+                        </div>` : ''}
                     </div>
                 </div>
                 <div class="detail-desc-card">
@@ -1213,9 +1221,10 @@ function renderAdDetail(id) {
                         ` : `
                             <button class="cta-button primary" style="width:100%;">📞 ELADÓ HÍVÁSA</button>
                         `}
-                        <button class="cta-button secondary" onclick="openUserChat('${car._id || car.id}', '${car.owner || car.ownerId || ''}', '${car.seller || 'Eladó'}', '${car.brand} ${car.model}')" style="width:100%;">💬 CHAT AZ ELADÓVAL</button>
+                        <div id="seller-rating-${car._id || car.id}" style="text-align:center; font-size:0.9rem; margin-bottom:0.5rem; color:#fbbf24; font-weight:bold;"></div>
+                        <button class="cta-button secondary" onclick="openUserChat('${String(car._id || car.id)}', '${String(car.owner || car.ownerId || '')}', '${String(car.seller || 'Eladó').replace(/'/g, "\\'")}', '${String(car.brand + ' ' + car.model).replace(/'/g, "\\'")}')" style="width:100%;">💬 CHAT AZ ELADÓVAL</button>
                         ${token && currentUser ? `
-                            <button class="cta-mini" onclick="openRatingModal('${car.owner || car.ownerId || ''}', '${car.seller || 'Eladó'}')" style="width:100%; padding:0.8rem; border:1px solid var(--border-color); background:transparent; color:var(--text-color); font-weight:bold; letter-spacing:1px;">⭐ ELADÓ ÉRTÉKELÉSE</button>
+                            <button class="cta-mini" onclick="openRatingModal('${String(car.owner || car.ownerId || '')}', '${String(car.seller || 'Eladó').replace(/'/g, "\\'")}')" style="width:100%; padding:0.8rem; border:1px solid var(--border-color); background:transparent; color:var(--text-color); font-weight:bold; letter-spacing:1px;">⭐ ELADÓ ÉRTÉKELÉSE</button>
                         ` : ''}
                         ${car.email ? `<p style="margin-top: 0.5rem; text-align:center; opacity: 0.7; font-size: 0.9rem;">📧 ${car.email}</p>` : ''}
                     </div>
@@ -1253,6 +1262,31 @@ function renderAdDetail(id) {
             </div>
         </div>
         `;
+
+    // Fetch and display seller rating
+    const ownerIdVar = car.owner || car.ownerId;
+    if (ownerIdVar) {
+        fetch(`${API_BASE_URL}/users/${ownerIdVar}/profile`)
+            .then(res => res.json())
+            .then(usr => {
+                const el = document.getElementById(`seller-rating-${car._id || car.id}`);
+                if (el && usr.totalRatings > 0) {
+                    el.innerHTML = `Értékelés: ⭐ ${usr.sellerRating.toFixed(1)} (${usr.totalRatings} vélemény)`;
+                    if (usr.ratings && usr.ratings.length > 0) {
+                        const comments = usr.ratings.filter(r => r.comment && r.comment.length > 0);
+                        if (comments.length > 0) {
+                            const last = comments[comments.length - 1];
+                            el.innerHTML += `<div style="font-size:0.8rem; color:var(--text-color); opacity:0.8; margin-top:0.4rem; line-height:1.2; font-style:italic;">"${last.comment}"<br>— ${last.raterName}</div>`;
+                        }
+                    }
+                } else if (el) {
+                    el.innerHTML = `Még nem kapott értékelést`;
+                    el.style.color = 'var(--text-color)';
+                    el.style.opacity = '0.6';
+                }
+            })
+            .catch(err => console.warn('Hiba a profil betöltésekor', err));
+    }
 
     // ===== IMAGE CAROUSEL LOGIC =====
     if (hasMultiple) {
@@ -1571,6 +1605,15 @@ function initSearch() {
         document.getElementById('listings').scrollIntoView({ behavior: 'smooth' });
     });
 
+    // Save Search Button
+    const saveSearchBtn = document.createElement('button');
+    saveSearchBtn.type = 'button';
+    saveSearchBtn.className = 'cta-mini';
+    saveSearchBtn.innerHTML = '📂 KERESÉS MENTÉSE';
+    saveSearchBtn.style.cssText = 'margin-top: 1rem; width: 100%; padding: 0.8rem; border: 1px dashed var(--border-color); background: transparent;';
+    saveSearchBtn.onclick = saveCurrentSearch;
+    form.appendChild(saveSearchBtn);
+
     // Detailed Search Toggle
     const toggleBtn = document.getElementById('detailed-search-toggle');
     const detailedBox = document.getElementById('detailed-search-box');
@@ -1776,6 +1819,13 @@ function initSubmission() {
     if (fileInput) {
         fileInput.addEventListener('change', async (e) => {
             const files = Array.from(e.target.files);
+            
+            if (base64Images.length + files.length > 10) {
+                showToast('Maximum 10 képet tölthetsz fel hirdetésenként!', 'warning');
+                fileInput.value = '';
+                return;
+            }
+
             for (const file of files) {
                 // First-line defense: don't even try if file is huge (e.g. 10MB+)
                 if (file.size > 10 * 1024 * 1024) {
@@ -2384,6 +2434,8 @@ function initAuth() {
         currentUser = null;
         localStorage.removeItem('lunnarToken');
         localStorage.removeItem('lunnarUser');
+        localStorage.removeItem('lunnarFavorites'); // Clear local favorites on logout
+        favorites = [];
         updateAuthUI();
         showToast('Sikeresen kijelentkeztél!', 'info');
         window.location.hash = '#home';
@@ -2569,6 +2621,14 @@ function initAuth() {
                 };
                 localStorage.setItem('lunnarToken', token);
                 localStorage.setItem('lunnarUser', JSON.stringify(currentUser));
+
+                // Sync Favorites: Merge server favorites with any existing local ones
+                const serverFavorites = (data.favorites || []).map(String);
+                const localFavorites = JSON.parse(localStorage.getItem('lunnarFavorites') || '[]').map(String);
+                const mergedFavorites = Array.from(new Set([...serverFavorites, ...localFavorites]));
+                favorites = mergedFavorites;
+                localStorage.setItem('lunnarFavorites', JSON.stringify(favorites));
+                syncFavoritesWithBackend(); // Push merged list back to server
 
                 showToast(`Üdvözöljük, ${data.username}! 🎉`, 'success');
                 authModal.classList.remove('active');
@@ -2884,6 +2944,7 @@ async function renderProfile() {
     // 3. Render Listings & Favorites
     fetchMyAds();
     renderProfileFavorites();
+    fetchSavedSearches();
 }
 
 let profileTabsInitialized = false;
@@ -2938,6 +2999,89 @@ function renderProfileFavorites() {
     }
 
     renderCarsIn(favCars, grid, false);
+}
+
+async function fetchSavedSearches() {
+    const grid = document.getElementById('my-searches-list');
+    if (!grid) return;
+
+    if (!token) return;
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/user/saved-searches`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (res.ok) {
+            renderSavedSearches(data.savedSearches);
+            updateQuickSearchMenus(data.savedSearches);
+        }
+    } catch (e) { console.error('Hiba a mentett keresések lekérésekor', e); }
+}
+
+function updateQuickSearchMenus(searches) {
+    const mainSelect = document.getElementById('quick-saved-searches');
+    const sidebarSelect = document.getElementById('sidebar-quick-saved-searches');
+    const mainContainer = document.getElementById('quick-saved-searches-container');
+    const sidebarContainer = document.getElementById('sidebar-quick-searches-container');
+
+    if (!searches || searches.length === 0) {
+        if (mainContainer) mainContainer.style.display = 'none';
+        if (sidebarContainer) sidebarContainer.style.display = 'none';
+        return;
+    }
+
+    if (mainContainer) mainContainer.style.display = 'block';
+    if (sidebarContainer) sidebarContainer.style.display = 'block';
+
+    const optionsHTML = `
+        <option value="">-- Válassz egy mentett keresést --</option>
+        ${searches.map(s => `<option value='${JSON.stringify(s.params)}'>${s.name}</option>`).join('')}
+    `;
+
+    if (mainSelect) mainSelect.innerHTML = optionsHTML;
+    if (sidebarSelect) sidebarSelect.innerHTML = optionsHTML;
+}
+
+function renderSavedSearches(searches) {
+    const grid = document.getElementById('my-searches-list');
+    if (!grid) return;
+
+    if (!searches || searches.length === 0) {
+        grid.innerHTML = '<div class="placeholder">NINCSENEK MENTETT KERESÉSEID</div>';
+        return;
+    }
+
+    grid.innerHTML = searches.map(s => `
+        <div class="saved-search-card glass-premium" style="padding:1.5rem; border-radius:12px; display:flex; justify-content:space-between; align-items:center; border: 1px solid rgba(255,255,255,0.05);">
+            <div>
+                <h4 style="margin:0; font-family:var(--font-heading); color:var(--text-color);">${s.name}</h4>
+                <p style="margin:0.5rem 0 0; font-size:0.8rem; opacity:0.6;">
+                    ${Object.entries(s.params).map(([k, v]) => `${translateKey(k)}: ${v}`).join(', ')}
+                </p>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button class="cta-mini" onclick='loadSavedSearch(${JSON.stringify(s.params)})' style="background:var(--accent-color); color:white;">Lefuttatás</button>
+                <button class="cta-mini" onclick="deleteSavedSearch('${s._id}')" style="background:#ef4444; color:white;">Törlés</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function translateKey(key) {
+    const dict = {
+        brand: 'Márka',
+        model: 'Modell',
+        minPrice: 'Min ár',
+        maxPrice: 'Max ár',
+        fuel: 'Üzemanyag',
+        transmission: 'Váltó',
+        minYear: 'Min év',
+        maxYear: 'Max év',
+        minHp: 'Min LE',
+        maxHp: 'Max LE'
+    };
+    return dict[key] || key;
 }
 
 async function fetchMyAds(searchQuery = '') {
@@ -3329,16 +3473,14 @@ function initAiChat() {
         messages.scrollTop = messages.scrollHeight;
     }
 
-    function processChatQuery(text) {
+    async function processChatQuery(text) {
         // Use LUNNAR_AI engine
-        const result = LUNNAR_AI.generateResponse(text);
+        const result = await LUNNAR_AI.generateResponse(text);
 
         if (result.filters && result.filters.hasFilters) {
             const { hasFilters, ...cleanFilters } = result.filters;
             applyDetectedFilters(cleanFilters);
-            // Add result count after filters applied
-            const count = typeof filteredCars !== 'undefined' ? filteredCars.length : '?';
-            appendMessage(result.reply + `<br>📊 <b>${count}</b> találat.`, 'ai-message', true);
+            appendMessage(result.reply, 'ai-message', true);
         } else {
             appendMessage(result.reply, 'ai-message', true);
         }
@@ -3631,6 +3773,7 @@ async function makeAdPremium(adId) {
 
 window.makeAdPremium = makeAdPremium;
 window.openRatingModal = openRatingModal;
+window.openUserChat = openUserChat;
 
 // ===== USER TO USER CHAT & AI INTEGRATION =====
 let activeChatAdId = null;
@@ -3869,5 +4012,218 @@ window.addEventListener('resize', () => {
     resizeNeural();
     resizeStarCanvas();
 });
+
+// ===== VIN CHECK (EXTERNAL) =====
+// carVertical integration via direct link in UI
+
+
+// ===== SAVED SEARCHES =====
+async function saveCurrentSearch() {
+    if (!token) {
+        showToast('A keresés mentéséhez be kell jelentkezned!', 'error');
+        document.getElementById('login-nav-btn').click();
+        return;
+    }
+
+    const form = document.getElementById('car-search-form');
+    if (!form) return;
+
+    const formData = new FormData(form);
+    const searchParams = {};
+    formData.forEach((value, key) => {
+        if (value && value !== 'any' && value !== '0') searchParams[key] = value;
+    });
+
+    if (Object.keys(searchParams).length === 0) {
+        showToast('Nincs kiválasztott szűrő a mentéshez.', 'warning');
+        return;
+    }
+
+    const name = prompt('Adj nevet a keresésnek (pl. "Olcsó BMW-k"):', `Keresés ${new Date().toLocaleDateString()}`);
+    if (!name) return;
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/user/saved-searches`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ name, params: searchParams })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            showToast('Keresés elmentve a profilodba! 📂', 'success');
+            fetchSavedSearches(); // Refresh both profile list and quick menus
+        } else {
+            showToast(data.message || 'Hiba a mentés során', 'error');
+        }
+    } catch (err) {
+        showToast('Hálózati hiba', 'error');
+    }
+}
+window.saveCurrentSearch = saveCurrentSearch;
+
+function loadSavedSearch(params) {
+    const mainForm = document.getElementById('car-search-form');
+    const sidebar = document.getElementById('sidebar-search');
+
+    // Helper to fill inputs in a container
+    const fillInputs = (container) => {
+        if (!container) return;
+        for (const key in params) {
+            // Match name attribute for main form, or id suffix for sidebar
+            let input = container.querySelector(`[name="${key}"]`);
+            if (!input && container.id === 'sidebar-search') {
+                // Sidebar uses IDs like 'sidebar-brand', 'sidebar-price-from' etc.
+                const sidebarIdMap = {
+                    brand: 'sidebar-brand',
+                    model: 'sidebar-model',
+                    fuel: 'sidebar-fuel',
+                    minPrice: 'sidebar-price-from',
+                    maxPrice: 'sidebar-price-to',
+                    minYear: 'sidebar-year-from',
+                    maxYear: 'sidebar-year-to',
+                    minKm: 'sidebar-km-from',
+                    maxKm: 'sidebar-km-to'
+                };
+                input = document.getElementById(sidebarIdMap[key]);
+            }
+            if (input) {
+                input.value = params[key];
+                // Trigger change for dependent selects (like model)
+                if (key === 'brand') input.dispatchEvent(new Event('change'));
+            }
+        }
+    };
+
+    if (mainForm) {
+        mainForm.reset();
+        const detailedBox = document.getElementById('detailed-search-box');
+        if (detailedBox) detailedBox.style.display = 'block';
+        fillInputs(mainForm);
+    }
+
+    if (sidebar) {
+        fillInputs(sidebar);
+    }
+    
+    showToast('Keresési feltételek betöltve!', 'info');
+    filterCars();
+    window.location.hash = '#home'; // Jump to results
+}
+
+window.loadSavedSearch = loadSavedSearch;
+
+async function deleteSavedSearch(id) {
+    if (!confirm('Biztosan törölni szeretnéd ezt a mentett keresést?')) return;
+    try {
+        const res = await fetch(`${API_BASE_URL}/user/saved-searches/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+            showToast('Keresés törölve');
+            renderProfile();
+        }
+    } catch (e) { showToast('Hiba a törléskor', 'error'); }
+}
+window.deleteSavedSearch = deleteSavedSearch;
+
+
+// ===== COMPARE SYSTEM =====
+// (compareList is declared at the top)
+
+function toggleCompare(carId, btn) {
+    const idx = compareList.indexOf(carId);
+    if (idx > -1) {
+        compareList.splice(idx, 1);
+        if (btn) btn.classList.remove('active');
+        showToast('Eltávolítva az összehasonlításból');
+    } else {
+        if (compareList.length >= 3) {
+            showToast('Maximum 3 autót hasonlíthatsz össze!', 'warning');
+            return;
+        }
+        compareList.push(carId);
+        if (btn) btn.classList.add('active');
+        showToast('Hozzáadva az összehasonlításhoz', 'success');
+    }
+    localStorage.setItem('lunnarCompareList', JSON.stringify(compareList));
+    renderCompareBar();
+}
+
+function renderCompareBar() {
+    let bar = document.getElementById('compare-bar');
+    if (!bar) {
+        bar = document.createElement('div');
+        bar.id = 'compare-bar';
+        bar.className = 'compare-floating-bar';
+        document.body.appendChild(bar);
+    }
+
+    if (compareList.length === 0) {
+        bar.classList.remove('visible');
+        return;
+    }
+
+    const compareCars = compareList.map(id => allCars.find(c => (c._id === id || c.id === id))).filter(Boolean);
+    
+    bar.innerHTML = `
+        <div class="compare-bar-content">
+            <div class="compare-items">
+                ${compareCars.map(car => `
+                    <div class="compare-item-mini">
+                        <img src="${car.images && car.images[0] ? car.images[0] : car.img}" alt="">
+                        <span>${car.brand}</span>
+                        <button onclick="toggleCompare('${car._id || car.id}')">×</button>
+                    </div>
+                `).join('')}
+            </div>
+            <button class="cta-button primary" onclick="openCompareModal()" style="padding: 0.5rem 1rem; font-size: 0.8rem;">ÖSSZEHASONLÍTÁS (${compareList.length})</button>
+        </div>
+    `;
+    bar.classList.add('visible');
+}
+
+function openCompareModal() {
+    const modal = document.getElementById('car-modal');
+    const container = document.getElementById('modal-details');
+    if (!modal || !container) return;
+
+    const cars = compareList.map(id => allCars.find(c => (c._id === id || c.id === id))).filter(Boolean);
+    if (cars.length < 1) {
+        showToast('Nincs kiválasztott autó!', 'warning');
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="compare-modal-view">
+            <h2 style="font-family:var(--font-heading); margin-bottom:2rem; text-align:center;">ÖSSZEHASONLÍTÁS</h2>
+            <div class="compare-table-wrapper" style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse; min-width:600px;">
+                    <thead>
+                        <tr>
+                            <th style="padding:1rem; text-align:left; border-bottom:2px solid var(--border-color);">ADAT</th>
+                            ${cars.map(c => `<th style="padding:1rem; border-bottom:2px solid var(--border-color);"><img src="${c.images[0]}" style="width:100px; height:60px; object-fit:cover; border-radius:4px;"><br>${c.brand} ${c.model}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td style="padding:0.8rem; border-bottom:1px solid var(--border-color); font-weight:bold;">Ár</td>${cars.map(c => `<td>${formatPrice(c.price)}</td>`).join('')}</tr>
+                        <tr><td style="padding:0.8rem; border-bottom:1px solid var(--border-color); font-weight:bold;">Évjárat</td>${cars.map(c => `<td>${c.year}</td>`).join('')}</tr>
+                        <tr><td style="padding:0.8rem; border-bottom:1px solid var(--border-color); font-weight:bold;">KM</td>${cars.map(c => `<td>${c.km} km</td>`).join('')}</tr>
+                        <tr><td style="padding:0.8rem; border-bottom:1px solid var(--border-color); font-weight:bold;">Erő</td>${cars.map(c => `<td>${c.hp} LE</td>`).join('')}</tr>
+                        <tr><td style="padding:0.8rem; border-bottom:1px solid var(--border-color); font-weight:bold;">Váltó</td>${cars.map(c => `<td>${c.transmission}</td>`).join('')}</tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+window.toggleCompare = toggleCompare;
+window.openCompareModal = openCompareModal;
+
+// Initialize bar on load
+setTimeout(renderCompareBar, 1000);
 
 init();

@@ -61,9 +61,6 @@
 </head>
 
 <body>
-    <div id="mouse-light"></div>
-
-
     <!-- ===== HEADER ===== -->
     <header>
         <nav>
@@ -260,10 +257,13 @@
                                 </div>
                             </div>
 
-                            <!-- ===== DETAILED SEARCH TOGGLE ===== -->
-                            <div class="detailed-search-toggle-container">
+                            <!-- ===== SEARCH TOGGLES ===== -->
+                            <div class="search-toggles-container" style="display: flex; gap: 1.5rem; margin-bottom: 1rem; justify-content: center;">
                                 <button type="button" id="detailed-search-toggle" class="text-btn">
                                     <span class="icon">＋</span> TOVÁBBI KERESÉSI OPCIÓK
+                                </button>
+                                <button type="button" id="main-history-toggle" class="text-btn">
+                                    <span class="icon">＋</span> KERESÉSI ELŐZMÉNYEK
                                 </button>
                             </div>
 
@@ -362,6 +362,16 @@
                                 <button type="reset" class="cta-button secondary">Szűrők törlése</button>
                             </div>
                         </form>
+                        <!-- Main Search History -->
+                        <div id="main-search-history" class="main-search-history" style="display: none; margin-top: 2rem; text-align: center; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
+                            <div class="history-header" style="justify-content: center; gap: 2rem;">
+                                <h4 style="font-family: var(--font-heading); font-size: 0.8rem; letter-spacing: 1.5px; color: #888;">LEGUTÓBBI KERESÉSEK</h4>
+                                <button id="clear-all-main-history" class="clear-history-btn">ÖSSZES TÖRLÉSE</button>
+                            </div>
+                            <div id="main-history-list" class="history-list-horizontal">
+                                <!-- JS fills this -->
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -1264,12 +1274,12 @@
             </div>
         </div>
 
-        <!-- ===== AI CHATBOT WIDGET ===== -->
+        <!-- ===== AI CHATBOT WIDGET (LEFT) ===== -->
         <div id="ai-chat-widget" class="ai-chat-widget">
             <button id="ai-chat-toggle" class="ai-chat-toggle" title="Lunnar AI Asszisztens">
                 <span class="ai-chat-icon">
-                    <img src="https://img.icons8.com/?size=100&id=rfkqAnUspAnn&format=png&color=FFFFFF" alt="AI"
-                        style="width: 32px; height: 32px;">
+                    <img src="https://img.icons8.com/?size=100&id=Imv4VIewVo4o&format=png&color=ffffff" alt="AI Icon"
+                        style="width: 35px; height: 35px;">
                 </span>
             </button>
             <div id="ai-chat-window" class="ai-chat-window">
@@ -1292,6 +1302,15 @@
                     </button>
                 </div>
             </div>
+        </div>
+
+        <!-- ===== MESSAGES TRIGGER WIDGET (RIGHT) ===== -->
+        <div id="messages-trigger-widget" class="messages-trigger-widget">
+            <button id="main-messages-toggle" class="ai-chat-toggle" onclick="goToProfileMessages()" title="Üzenetek">
+                <div id="main-messages-badge" class="messages-badge"></div>
+                <img src="https://img.icons8.com/?size=100&id=38977&format=png&color=ffffff" alt="Messages Icon"
+                    style="width: 32px; height: 32px;">
+            </button>
         </div>
 
         <!-- ===== FOOTER ===== -->
@@ -1411,6 +1430,16 @@
                         src="https://img.icons8.com/?size=100&id=N0MB26bObOeS&format=png&color=000000" alt="Search Icon"
                         style="width: 14px; height: 14px;"> Keresés</button>
                 <button class="sidebar-reset-btn" id="sidebar-search-reset">Szűrők törlése</button>
+
+                <div id="sidebar-search-history" class="sidebar-search-history" style="display: none;">
+                    <div class="history-header">
+                        <h4>ELŐZMÉNYEK</h4>
+                        <button id="clear-all-history" class="clear-history-btn">Összes törlése</button>
+                    </div>
+                    <div id="history-list" class="history-list">
+                        <!-- JS fills this -->
+                    </div>
+                </div>
             </div>
         </div>
 

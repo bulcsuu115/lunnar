@@ -170,30 +170,9 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-// ===== MOUSE LIGHT =====
+/* ===== MOUSE LIGHT (KIKAPCSOLVA) ===== */
 let mouseX = 0, mouseY = 0;
-let mouseUpdatePending = false;
-const mouseLight = document.getElementById('mouse-light');
-
-window.addEventListener('mousemove', (e) => {
-    mouseX = e.clientX;
-    mouseY = e.clientY;
-
-    if (!mouseUpdatePending) {
-        mouseUpdatePending = true;
-        requestAnimationFrame(() => {
-            if (mouseLight) {
-                // Direct transform is much faster than updating global CSS variables
-                mouseLight.style.transform = `translate(calc(${mouseX}px - 50%), calc(${mouseY}px - 50%))`;
-            } else {
-                // Fallback for CSS variable based implementation
-                document.documentElement.style.setProperty('--mouse-x', `${(mouseX / width) * 100}%`);
-                document.documentElement.style.setProperty('--mouse-y', `${(mouseY / height) * 100}%`);
-            }
-            mouseUpdatePending = false;
-        });
-    }
-}, { passive: true });
+// A kurzor fényeffektus JavaScript követése le lett tiltva a felhasználó kérésére.
 
 // ===== TYPING EFFECT =====
 const subtitleText = "A tökéletes használt autó megtalálása még sosem volt ilyen egyszerű.";
@@ -1680,6 +1659,7 @@ function initSearch() {
 
     form.addEventListener('submit', (e) => {
         e.preventDefault();
+        saveSearchHistory();
         filterCars();
         document.getElementById('listings').scrollIntoView({ behavior: 'smooth' });
     });
@@ -1746,6 +1726,21 @@ function initSearch() {
             }
         });
     });
+
+    // Main Search History Toggle
+    const historyToggle = document.getElementById('main-history-toggle');
+    const mainHistoryBox = document.getElementById('main-search-history');
+    if (historyToggle && mainHistoryBox) {
+        historyToggle.addEventListener('click', () => {
+            const isActive = mainHistoryBox.style.display === 'block';
+            mainHistoryBox.style.display = isActive ? 'none' : 'block';
+            historyToggle.innerHTML = isActive ?
+                '<span class="icon">＋</span> KERESÉSI ELŐZMÉNYEK' :
+                '<span class="icon" style="transform: rotate(45deg)">＋</span> KERESÉSI ELŐZMÉNYEK (ELREJTÉS)';
+            
+            if (!isActive) renderSearchHistory();
+        });
+    }
 }
 
 // ===== MODAL EVENTS =====
@@ -3213,9 +3208,6 @@ function renderCarCard(car, isProfileView = false) {
     );
 
     return `
-    --accent-color: #3b82f6;
-    --accent-color: #3b82f6;
-    --accent-color: #3b82f6;
         <div class="car-card glass-premium fade-in ${car.isPremium ? 'premium-ad' : ''}" data-id="${car._id || car.id}" style="${car.isPremium ? 'border: 2px solid #3b82f6; position: relative;' : ''}">
             ${car.isPremium ? '<div style="position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:#fbbf24; color:#000; padding:4px 12px; border-radius:12px; font-weight:bold; font-size:0.75rem; z-index:10; box-shadow:0 4px 10px rgba(251,191,36,0.3);">KIEMELT</div>' : ''}
             <div class="car-image" onclick="window.location.hash='#ad/${car._id || car.id}'">
@@ -3439,6 +3431,7 @@ function initSidebarSearch() {
             document.getElementById('distance-select').value = document.getElementById('sidebar-distance').value;
 
             filterCars();
+            saveSearchHistory();
             closeSidebar();
             document.getElementById('listings').scrollIntoView({ behavior: 'smooth' });
         }, 100);
@@ -4129,6 +4122,8 @@ async function fetchUserInbox() {
             localStorage.setItem('lunnarLastUnread', currentUnread);
 
             if (badge) badge.textContent = currentUnread || '0';
+            const mainBadge = document.getElementById('main-messages-badge');
+            if (mainBadge) mainBadge.textContent = currentUnread > 0 ? currentUnread : '';
             renderUserInbox(convList);
         }
     } catch (err) {
@@ -4170,11 +4165,15 @@ function renderUserInbox(conversations) {
 window.fetchUserInbox = fetchUserInbox;
 
 function goToProfileMessages() {
-    window.location.hash = '#profile';
+    if (!token) {
+        showToast('Az üzenetek megtekintéséhez be kell jelentkezned!', 'info');
+        return;
+    }
+    window.location.hash = '#view-profile';
     setTimeout(() => {
         const btn = document.querySelector('[data-profile-tab="my-messages"]');
         if (btn) btn.click();
-    }, 100);
+    }, 1500); // 1.5 mp várás a profil betöltésére
 }
 window.goToProfileMessages = goToProfileMessages;
 
@@ -4350,9 +4349,198 @@ async function handleChatAiAssistant() {
     }, 1500);
 }
 
+
+// ===== SEARCH HISTORY LOGIC =====
+const HISTORY_STORAGE_KEY = 'lunnarSearchHistory';
+const MAX_HISTORY_ITEMS = 5;
+
+function saveSearchHistory() {
+    // Get current filter values
+    const criteria = {
+        brand: document.getElementById('brand-select').value,
+        model: document.getElementById('model-select').value,
+        fuel: document.getElementById('fuel-select')?.value || '',
+        priceFrom: document.getElementById('price-from')?.value || '',
+        priceTo: document.getElementById('price-to')?.value || '',
+        yearFrom: document.getElementById('year-from')?.value || '',
+        yearTo: document.getElementById('year-to')?.value || '',
+        kmFrom: document.getElementById('km-from')?.value || '',
+        kmTo: document.getElementById('km-to')?.value || '',
+        city: document.getElementById('city-search')?.value || '',
+        distance: document.getElementById('distance-select')?.value || '0',
+        timestamp: Date.now()
+    };
+
+    // Only save if at least brand is selected
+    if (!criteria.brand) return;
+
+    let history = loadSearchHistory();
+
+    // Check for duplicates (same brand and model)
+    const duplicateIndex = history.findIndex(item => item.brand === criteria.brand && item.model === criteria.model);
+    if (duplicateIndex !== -1) {
+        history.splice(duplicateIndex, 1);
+    }
+
+    // Add to start and limit
+    history.unshift(criteria);
+    history = history.slice(0, MAX_HISTORY_ITEMS);
+
+    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
+    renderSearchHistory();
+}
+
+function loadSearchHistory() {
+    try {
+        const data = localStorage.getItem(HISTORY_STORAGE_KEY);
+        return data ? JSON.parse(data) : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function renderSearchHistory() {
+    const history = loadSearchHistory();
+
+    // Sidebar rendering
+    const sidebarHistoryList = document.getElementById('history-list');
+    const sidebarContainer = document.getElementById('sidebar-search-history');
+    if (sidebarHistoryList && sidebarContainer) {
+        if (history.length === 0) {
+            sidebarContainer.style.display = 'none';
+        } else {
+            sidebarContainer.style.display = 'block';
+            sidebarHistoryList.innerHTML = history.map((item, index) => renderHistoryItemHTML(item, index)).join('');
+        }
+    }
+
+    // Main Search rendering
+    const mainHistoryList = document.getElementById('main-history-list');
+    const mainContainer = document.getElementById('main-search-history');
+    if (mainHistoryList && mainContainer) {
+        if (history.length === 0) {
+            mainContainer.style.display = 'none';
+        } else {
+            // Ne kényszerítsük a 'block' állapotot, hagyjuk meg a kapcsoló állását
+            mainHistoryList.innerHTML = history.map((item, index) => renderHistoryItemHTML(item, index)).join('');
+        }
+    }
+
+    // Event listeners for history items in both places
+    document.querySelectorAll('.history-item').forEach(el => {
+        el.addEventListener('click', (e) => {
+            if (e.target.classList.contains('history-delete-btn')) {
+                e.stopPropagation();
+                deleteHistoryItem(parseInt(e.target.dataset.index));
+                return;
+            }
+            const index = parseInt(el.dataset.index);
+            applySearchHistory(history[index]);
+        });
+    });
+}
+
+function renderHistoryItemHTML(item, index) {
+    const title = `${item.brand} ${item.model || '(Összes modell)'}`;
+    let meta = [];
+    if (item.fuel) meta.push(item.fuel);
+    if (item.priceFrom || item.priceTo) meta.push(`${item.priceFrom || 0}-${item.priceTo || '∞'} Ft`);
+    if (item.yearFrom || item.yearTo) meta.push(`${item.yearFrom || '...'} - ${item.yearTo || '...'}`);
+
+    return `
+        <div class="history-item" data-index="${index}">
+            <div class="history-content">
+                <div class="history-title">${title}</div>
+                <span class="history-meta">${meta.join(' • ')}</span>
+            </div>
+            <button class="history-delete-btn" data-index="${index}" title="Eltávolítás">&times;</button>
+        </div>
+    `;
+}
+
+function applySearchHistory(criteria) {
+    // Fill main search form
+    const mainBrand = document.getElementById('brand-select');
+    if (mainBrand) {
+        mainBrand.value = criteria.brand;
+        mainBrand.dispatchEvent(new Event('change'));
+
+        // Fill sidebar as well
+        const sidebarBrand = document.getElementById('sidebar-brand');
+        if (sidebarBrand) {
+            sidebarBrand.value = criteria.brand;
+            sidebarBrand.dispatchEvent(new Event('change'));
+        }
+
+        setTimeout(() => {
+            const mainModel = document.getElementById('model-select');
+            const sidebarModel = document.getElementById('sidebar-model');
+            if (mainModel) mainModel.value = criteria.model;
+            if (sidebarModel) sidebarModel.value = criteria.model;
+
+            if (mainModel?._searchableSelect) mainModel._searchableSelect.rebuild();
+            if (sidebarModel?._searchableSelect) sidebarModel._searchableSelect.rebuild();
+
+            // Sync other fields
+            const sync = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.value = val || '';
+            };
+
+            sync('fuel-select', criteria.fuel);
+            sync('sidebar-fuel', criteria.fuel);
+            sync('price-from', criteria.priceFrom);
+            sync('sidebar-price-from', criteria.priceFrom);
+            sync('price-to', criteria.priceTo);
+            sync('sidebar-price-to', criteria.priceTo);
+            sync('year-from', criteria.yearFrom);
+            sync('sidebar-year-from', criteria.yearFrom);
+            sync('year-to', criteria.yearTo);
+            sync('sidebar-year-to', criteria.yearTo);
+            sync('km-from', criteria.kmFrom);
+            sync('sidebar-km-from', criteria.kmFrom);
+            sync('km-to', criteria.kmTo);
+            sync('sidebar-km-to', criteria.kmTo);
+            sync('city-search', criteria.city);
+            sync('sidebar-city', criteria.city);
+            sync('distance-select', criteria.distance);
+            sync('sidebar-distance', criteria.distance);
+
+            filterCars();
+
+            // Close sidebar if open
+            const sidebar = document.getElementById('sidebar-search');
+            if (sidebar) sidebar.classList.remove('open');
+            const overlay = document.querySelector('.sidebar-overlay');
+            if (overlay) overlay.classList.remove('active');
+            document.body.style.overflow = '';
+
+            document.getElementById('listings').scrollIntoView({ behavior: 'smooth' });
+            showToast('Keresési előzmény alkalmazva!', 'info');
+        }, 200);
+    }
+}
+
+function deleteHistoryItem(index) {
+    let history = loadSearchHistory();
+    history.splice(index, 1);
+    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
+    renderSearchHistory();
+}
+
+function clearAllSearchHistory() {
+    localStorage.removeItem(HISTORY_STORAGE_KEY);
+    renderSearchHistory();
+    showToast('Keresési előzmények törölve!', 'info');
+}
+
 // Global exposure
 window.openUserChat = openUserChat;
 window.deleteConversation = deleteConversation;
+window.moderateAd = moderateAd;
+window.deleteAd = deleteAd;
+window.toggleAdmin = toggleAdmin;
+window.editAd = editAd;
 
 // Event Listeners for Chat
 document.getElementById('chat-send-btn')?.addEventListener('click', sendUserChatMessage);
@@ -4360,3 +4548,13 @@ document.getElementById('chat-input-text')?.addEventListener('keypress', (e) => 
 document.getElementById('chat-image-input')?.addEventListener('change', handleChatImageUpload);
 document.getElementById('user-chat-close')?.addEventListener('click', closeUserChat);
 document.getElementById('chat-ask-ai-btn')?.addEventListener('click', handleChatAiAssistant);
+
+// Initialize history
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(renderSearchHistory, 500);
+    const clearBtnSidebar = document.getElementById('clear-all-history');
+    if (clearBtnSidebar) clearBtnSidebar.addEventListener('click', clearAllSearchHistory);
+    
+    const clearBtnMain = document.getElementById('clear-all-main-history');
+    if (clearBtnMain) clearBtnMain.addEventListener('click', clearAllSearchHistory);
+});

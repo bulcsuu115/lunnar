@@ -3775,6 +3775,8 @@ window.openUserChat = openUserChat;
 // ===== USER TO USER CHAT & AI INTEGRATION =====
 let activeChatAdId = null;
 let activeChatReceiverId = null;
+let chatPollingInterval = null;
+let inboxPollingInterval = null;
 
 function openUserChat(adId, receiverId, sellerName, paramAdTitle) {
     if (!token || !currentUser) {
@@ -3796,12 +3798,20 @@ function openUserChat(adId, receiverId, sellerName, paramAdTitle) {
     modal.classList.add('active');
     
     fetchChatMessages();
+    
+    // Start polling
+    if (chatPollingInterval) clearInterval(chatPollingInterval);
+    chatPollingInterval = setInterval(fetchChatMessages, 3000);
 }
 
 function closeUserChat() {
     document.getElementById('user-chat-modal')?.classList.remove('active');
     activeChatAdId = null;
     activeChatReceiverId = null;
+    if (chatPollingInterval) {
+        clearInterval(chatPollingInterval);
+        chatPollingInterval = null;
+    }
 }
 
 document.getElementById('user-chat-close')?.addEventListener('click', closeUserChat);
@@ -3813,6 +3823,7 @@ async function fetchChatMessages() {
         const res = await fetch(`${API_BASE_URL}/messages/${activeChatAdId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
+        if (!res.ok) return;
         const messages = await res.json();
         renderUserChatMessages(messages);
     } catch (err) {
@@ -3829,7 +3840,8 @@ function renderUserChatMessages(messages) {
         container.innerHTML = '<div style="text-align:center; opacity:0.6; padding:1rem; font-size:0.8rem;">Itt kezdheted el a beszélgetést az eladóval.</div>';
     } else {
         messages.forEach(msg => {
-            const isMe = (msg.senderId._id || msg.senderId) === currentUser.id;
+            const senderId = String(msg.senderId._id || msg.senderId);
+            const isMe = senderId === String(currentUser.id);
             const el = document.createElement('div');
             el.className = `message ${isMe ? 'user-message' : 'ai-message'}`;
             el.style.backgroundColor = isMe ? 'var(--primary-color)' : 'rgba(255,255,255,0.05)';
@@ -3997,6 +4009,10 @@ async function init() {
     initCompareListeners();
     initGeolocation();
     initAiChat();
+
+    // Start inbox polling
+    if (inboxPollingInterval) clearInterval(inboxPollingInterval);
+    inboxPollingInterval = setInterval(fetchUserInbox, 10000);
 
     // Catch-all for any remaining selects across the page
     setTimeout(() => {

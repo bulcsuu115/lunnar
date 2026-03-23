@@ -384,13 +384,11 @@ app.get('/api/user/stats', authenticateToken, async (req, res) => {
 // Messaging
 app.get('/api/messages/:adId', authenticateToken, async (req, res) => {
     try {
-        const messages = await Message.find({ adId: req.params.adId }).sort({ createdAt: 1 });
-        // Only return if user is sender or receiver - simple security check
-        const relevantMessages = messages.filter(m => 
-            m.senderId.toString() === req.user.userId || 
-            m.receiverId.toString() === req.user.userId
-        );
-        res.json(relevantMessages);
+        const messages = await Message.find({ 
+            adId: req.params.adId,
+            $or: [{ senderId: req.user.userId }, { receiverId: req.user.userId }]
+        }).populate('senderId', 'username').populate('receiverId', 'username').sort({ createdAt: 1 });
+        res.json(messages);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

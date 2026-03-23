@@ -6686,3 +6686,37 @@ body.light-mode .history-item:hover {
 .messages-badge:empty {
     display: none;
 }
+
+/* ===== MOBILE OVERRIDES FOR FLOATING WIDGETS ===== */
+@media (max-width: 768px) {
+    .ai-chat-widget {
+        bottom: 20px !important;
+        left: 20px !important;
+    }
+    
+    .messages-trigger-widget {
+        bottom: 20px !important;
+        right: 20px !important;
+    }
+    
+    .ai-chat-toggle {
+        width: 55px !important;
+        height: 55px !important;
+    }
+    
+    .ai-chat-icon img, 
+    .messages-trigger-widget img {
+        width: 25px !important;
+        height: 25px !important;
+    }
+    
+    .messages-badge {
+        width: 20px;
+        height: 20px;
+        font-size: 0.7rem;
+    }
+    
+    .nav-search-btn {
+        left: 15px !important;
+    }
+}

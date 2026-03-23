@@ -455,10 +455,10 @@ function generateCars(count = 12) {
         const hp = 80 + Math.floor(Math.random() * 420);
         const ccm = fuel === 'Elektromos' ? null : (1000 + Math.floor(Math.random() * 4) * 500);
         const price = Math.floor((3 + Math.random() * 45) * 1000000 / 100000) * 100000;
-        
+
         // Use the expanded CITIES list for more variety
         const city = CITIES[Math.floor(Math.random() * CITIES.length)];
-        
+
         const img = CAR_IMAGES[i % CAR_IMAGES.length];
         const badge = Math.random() > 0.55 ? BADGE_TYPES[Math.floor(Math.random() * BADGE_TYPES.length)] : null;
         const daysAgo = Math.floor(Math.random() * 30);
@@ -565,7 +565,7 @@ function getModelGroups(brand, models) {
             if (num === '3' || num === '8') suffix = '-as';
             else if (num === '6') suffix = '-os';
             else if (num === '5') suffix = '-ös';
-            
+
             if (/^[1-8]/.test(model)) groupName = `${num}${suffix} sorozat`;
             else if (model.startsWith('X')) groupName = "X sorozat";
             else if (model.startsWith('Z')) groupName = "Z sorozat";
@@ -643,7 +643,7 @@ class SearchableSelect {
     init() {
         this.container = document.createElement('div');
         this.container.className = 'searchable-select';
-        
+
         // Copy width if specified in style
         if (this.select.style.width) this.container.style.width = this.select.style.width;
         if (this.select.style.margin) this.container.style.margin = this.select.style.margin;
@@ -660,7 +660,7 @@ class SearchableSelect {
 
         this.dropdown = document.createElement('div');
         this.dropdown.className = 'searchable-select-dropdown';
-        
+
         const searchBox = document.createElement('div');
         searchBox.className = 'searchable-select-search';
         this.searchInput = document.createElement('input');
@@ -715,7 +715,7 @@ class SearchableSelect {
     renderOptions(filter = '') {
         if (!this.optionsContainer) return;
         this.optionsContainer.innerHTML = '';
-        
+
         let foundAny = false;
         const children = Array.from(this.select.children);
 
@@ -1002,7 +1002,7 @@ function filterCars() {
             if (!carCoords) {
                 // FALLBACK: if distance is requested but car city is unknown, check exact name match
                 if (searchCity && car.city.toLowerCase().includes(searchCity.toLowerCase())) return true;
-                return false; 
+                return false;
             }
             const dist = getDistanceFromLatLonInKm(targetCoords.lat, targetCoords.ln, carCoords.lat, carCoords.ln);
             if (dist > distanceLimit) return false;
@@ -1321,7 +1321,7 @@ function renderAdDetail(id) {
                             <div class="comment-content">
                                 <div class="comment-header">
                                     <span>${c.username}</span>
-                                    <span>${new Date(c.createdAt).toLocaleDateString('hu-HU', {year:'numeric', month:'short', day:'numeric'})}</span>
+                                    <span>${new Date(c.createdAt).toLocaleDateString('hu-HU', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
                                 </div>
                                 <div class="comment-text">${c.text}</div>
                             </div>
@@ -1454,7 +1454,7 @@ function renderAdDetail(id) {
     if (car.priceHistory && car.priceHistory.length > 0) {
         setTimeout(() => renderPriceChart(car.priceHistory), 100);
     }
-    
+
     // Rögzítjük a megtekintést a szerveren
     if (car._id || car.id) {
         fetch(`${API_BASE_URL}/ads/${car._id || car.id}/view`, { method: 'POST' }).catch(e => console.log('View stat error ignored', e));
@@ -1890,7 +1890,7 @@ function initSubmission() {
     if (fileInput) {
         fileInput.addEventListener('change', async (e) => {
             const files = Array.from(e.target.files);
-            
+
             if (base64Images.length + files.length > 10) {
                 showToast('Maximum 10 képet tölthetsz fel hirdetésenként!', 'warning');
                 fileInput.value = '';
@@ -2670,9 +2670,9 @@ async function initAuth() {
 
             if (res.ok) {
                 token = data.token;
-                currentUser = { 
-                    username: data.username, 
-                    email: email, 
+                currentUser = {
+                    username: data.username,
+                    email: email,
                     id: data.userId,
                     isVerified: data.isVerified || false,
                     phone: data.phone || '',
@@ -2886,85 +2886,85 @@ function initCompareListeners() {
         });
     }
 
-async function sendUserChatMessage() {
-    if (!token || !currentUser || !activeChatAdId || !activeChatReceiverId) return;
-    
-    const input = document.getElementById('chat-input-text');
-    const text = input.value.trim();
-    if (!text && !lastUploadedImageData) return;
+    async function sendUserChatMessage() {
+        if (!token || !currentUser || !activeChatAdId || !activeChatReceiverId) return;
 
-    try {
-        const res = await fetch(`${API_BASE_URL}/messages`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ 
-                receiverId: activeChatReceiverId,
-                adId: activeChatAdId,
-                content: text,
-                imageUrl: lastUploadedImageData
-            })
-        });
-        if (res.ok) {
-            input.value = '';
-            lastUploadedImageData = null;
+        const input = document.getElementById('chat-input-text');
+        const text = input.value.trim();
+        if (!text && !lastUploadedImageData) return;
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/messages`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    receiverId: activeChatReceiverId,
+                    adId: activeChatAdId,
+                    content: text,
+                    imageUrl: lastUploadedImageData
+                })
+            });
+            if (res.ok) {
+                input.value = '';
+                lastUploadedImageData = null;
+                const imgBtn = document.querySelector('.chat-upload-btn');
+                if (imgBtn) imgBtn.textContent = '📷';
+                fetchChatMessages();
+            } else {
+                const err = await res.json();
+                showToast(err.message || 'Nem sikerült elküldeni az üzenetet.', 'error');
+            }
+        } catch (err) {
+            showToast('Hálózati hiba az üzenet küldésekor', 'error');
+        }
+    }
+
+    let lastUploadedImageData = null;
+    async function handleChatImageUpload(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        try {
+            showToast('Kép feldolgozása...', 'info');
+            const compressed = await compressImage(file, 800, 800, 0.7);
+            lastUploadedImageData = compressed;
             const imgBtn = document.querySelector('.chat-upload-btn');
-            if (imgBtn) imgBtn.textContent = '📷';
-            fetchChatMessages();
-        } else {
-            const err = await res.json();
-            showToast(err.message || 'Nem sikerült elküldeni az üzenetet.', 'error');
+            if (imgBtn) imgBtn.textContent = '✅';
+            showToast('Kép készen áll a küldésre!', 'success');
+        } catch (err) {
+            console.error(err);
+            showToast('Sikertelen képfeldolgozás', 'error');
         }
-    } catch (err) {
-        showToast('Hálózati hiba az üzenet küldésekor', 'error');
     }
-}
 
-let lastUploadedImageData = null;
-async function handleChatImageUpload(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    try {
-        showToast('Kép feldolgozása...', 'info');
-        const compressed = await compressImage(file, 800, 800, 0.7);
-        lastUploadedImageData = compressed;
-        const imgBtn = document.querySelector('.chat-upload-btn');
-        if (imgBtn) imgBtn.textContent = '✅';
-        showToast('Kép készen áll a küldésre!', 'success');
-    } catch (err) {
-        console.error(err);
-        showToast('Sikertelen képfeldolgozás', 'error');
+    async function markMessagesAsRead(adId, otherPartyId) {
+        if (!token) return;
+        try {
+            await fetch(`${API_BASE_URL}/messages/read/${adId}/${otherPartyId}`, {
+                method: 'PATCH',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+        } catch (err) { console.error(err); }
     }
-}
 
-async function markMessagesAsRead(adId, otherPartyId) {
-    if (!token) return;
-    try {
-        await fetch(`${API_BASE_URL}/messages/read/${adId}/${otherPartyId}`, {
-            method: 'PATCH',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-    } catch (err) { console.error(err); }
-}
-
-async function deleteConversation(adId, otherPartyId) {
-    if (!confirm('Biztosan törölni szeretnéd ezt a beszélgetést?')) return;
-    try {
-        const res = await fetch(`${API_BASE_URL}/messages/conversation/${adId}/${otherPartyId}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) {
-            showToast('Beszélgetés törölve', 'success');
-            fetchUserInbox();
+    async function deleteConversation(adId, otherPartyId) {
+        if (!confirm('Biztosan törölni szeretnéd ezt a beszélgetést?')) return;
+        try {
+            const res = await fetch(`${API_BASE_URL}/messages/conversation/${adId}/${otherPartyId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                showToast('Beszélgetés törölve', 'success');
+                fetchUserInbox();
+            }
+        } catch (err) {
+            showToast('Hiba a törlés során', 'error');
         }
-    } catch (err) {
-        showToast('Hiba a törlés során', 'error');
     }
-}
 
     const compareClose = document.getElementById('compare-close');
     if (compareClose) {
@@ -3008,7 +3008,7 @@ async function renderProfile() {
 
     // Filter server ads for owner too
     const myServerAds = allCars.filter(ad => ad.ownerEmail === currentUser.email || ad.ownerId === currentUser.id || ad.email === currentUser.email);
-    
+
     // Combine unique ads for the counter
     const uniqueMyAds = [...new Map([...myServerAds, ...myAds].map(item => [item._id || item.id, item])).values()];
 
@@ -3033,19 +3033,19 @@ async function renderProfile() {
     const ratingCount = document.getElementById('profile-rating-count');
 
     if (currentUser.isVerified) {
-        if(verifiedBadge) verifiedBadge.style.display = 'inline-block';
-        if(verifyBtn) verifyBtn.style.display = 'none';
+        if (verifiedBadge) verifiedBadge.style.display = 'inline-block';
+        if (verifyBtn) verifyBtn.style.display = 'none';
     } else {
-        if(verifiedBadge) verifiedBadge.style.display = 'none';
-        if(verifyBtn) verifyBtn.style.display = 'block';
+        if (verifiedBadge) verifiedBadge.style.display = 'none';
+        if (verifyBtn) verifyBtn.style.display = 'block';
     }
 
     if (currentUser.totalRatings > 0) {
-        if(ratingDisplay) ratingDisplay.style.display = 'block';
-        if(ratingValue) ratingValue.textContent = Number(currentUser.sellerRating).toFixed(1);
-        if(ratingCount) ratingCount.textContent = `(${currentUser.totalRatings} értékelés)`;
+        if (ratingDisplay) ratingDisplay.style.display = 'block';
+        if (ratingValue) ratingValue.textContent = Number(currentUser.sellerRating).toFixed(1);
+        if (ratingCount) ratingCount.textContent = `(${currentUser.totalRatings} értékelés)`;
     } else {
-        if(ratingDisplay) ratingDisplay.style.display = 'none';
+        if (ratingDisplay) ratingDisplay.style.display = 'none';
     }
 
     // Hitelesítés logikája (Szimulált)
@@ -3067,7 +3067,7 @@ async function renderProfile() {
                     } else {
                         showToast('Hiba a hitelesítés során!', 'error');
                     }
-                } catch(e) {
+                } catch (e) {
                     showToast('Hálózati hiba!', 'error');
                 }
             }
@@ -3078,14 +3078,14 @@ async function renderProfile() {
     fetch(`${API_BASE_URL}/user/stats`, {
         headers: { 'Authorization': `Bearer ${token}` }
     })
-    .then(res => res.json())
-    .then(stats => {
-        const tViews = document.getElementById('stat-total-views');
-        const tFavs = document.getElementById('stat-total-favs');
-        if(tViews && stats.totalViews !== undefined) tViews.textContent = stats.totalViews;
-        if(tFavs && stats.totalFavorites !== undefined) tFavs.textContent = stats.totalFavorites;
-    })
-    .catch(e => console.log('Hiba a statisztika lekérésekor', e));
+        .then(res => res.json())
+        .then(stats => {
+            const tViews = document.getElementById('stat-total-views');
+            const tFavs = document.getElementById('stat-total-favs');
+            if (tViews && stats.totalViews !== undefined) tViews.textContent = stats.totalViews;
+            if (tFavs && stats.totalFavorites !== undefined) tFavs.textContent = stats.totalFavorites;
+        })
+        .catch(e => console.log('Hiba a statisztika lekérésekor', e));
 
     // 3. Render Listings, Favorites & Inbox
     fetchMyAds();
@@ -3213,7 +3213,10 @@ function renderCarCard(car, isProfileView = false) {
     );
 
     return `
-        <div class="car-card glass-premium fade-in ${car.isPremium ? 'premium-ad' : ''}" data-id="${car._id || car.id}" style="${car.isPremium ? 'border: 2px solid #fbbf24; position: relative;' : ''}">
+    --accent-color: #3b82f6;
+    --accent-color: #3b82f6;
+    --accent-color: #3b82f6;
+        <div class="car-card glass-premium fade-in ${car.isPremium ? 'premium-ad' : ''}" data-id="${car._id || car.id}" style="${car.isPremium ? 'border: 2px solid #3b82f6; position: relative;' : ''}">
             ${car.isPremium ? '<div style="position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:#fbbf24; color:#000; padding:4px 12px; border-radius:12px; font-weight:bold; font-size:0.75rem; z-index:10; box-shadow:0 4px 10px rgba(251,191,36,0.3);">KIEMELT</div>' : ''}
             <div class="car-image" onclick="window.location.hash='#ad/${car._id || car.id}'">
                 <img src="${firstImg}" alt="${car.brand} ${car.model}" loading="lazy">
@@ -3661,7 +3664,7 @@ function requestUserLocation(isAuto = false) {
             window.userCoords = { lat: pos.coords.latitude, ln: pos.coords.longitude };
             if (mainInput) mainInput.value = 'Jelenlegi helyzetem';
             if (sidebarInput) sidebarInput.value = 'Jelenlegi helyzetem';
-            
+
             // Auto-set a reasonable distance if none or 0 is selected
             const distSelect = document.getElementById('distance-select');
             const sideDistSelect = document.getElementById('sidebar-distance');
@@ -3676,9 +3679,9 @@ function requestUserLocation(isAuto = false) {
 
             if (mainBtn) mainBtn.textContent = '📍';
             if (sidebarBtn) sidebarBtn.textContent = '📍';
-            
+
             if (!isAuto) showToast('Helymeghatározás sikeres!', 'success');
-            
+
             if (typeof filterCars === 'function') filterCars();
         },
         (err) => {
@@ -3763,16 +3766,16 @@ function openRatingModal(sellerId, sellerName) {
     }
     const modal = document.getElementById('rating-modal');
     if (!modal) return;
-    
+
     document.getElementById('rating-seller-name').textContent = sellerName;
-    
+
     // Clear previous stars
     const stars = modal.querySelectorAll('#star-rating-input span');
     stars.forEach(s => {
         s.classList.remove('active');
         s.style.color = 'var(--border-color)';
     });
-    
+
     const submitBtn = document.getElementById('submit-rating-btn');
     submitBtn.disabled = true;
 
@@ -3781,7 +3784,7 @@ function openRatingModal(sellerId, sellerName) {
         star.onclick = () => {
             selectedRating = parseInt(star.dataset.value);
             stars.forEach(s => { s.classList.remove('active'); s.style.color = 'var(--border-color)'; });
-            for(let i=0; i<selectedRating; i++) {
+            for (let i = 0; i < selectedRating; i++) {
                 stars[i].classList.add('active');
                 stars[i].style.color = '#fbbf24'; // Arany szín a csillagoknak
             }
@@ -3796,7 +3799,7 @@ function openRatingModal(sellerId, sellerName) {
         }
         submitBtn.disabled = true;
         submitBtn.textContent = 'KÜLDÉS...';
-        
+
         try {
             const res = await fetch(`${API_BASE_URL}/users/${sellerId}/rate`, {
                 method: 'POST',
@@ -3830,7 +3833,7 @@ document.getElementById('rating-close')?.addEventListener('click', () => {
 async function makeAdPremium(adId) {
     if (!token || !currentUser) return;
     if (!confirm('A prémium kiemelés díja 5000 Ft (Demó: gombnyomásra szimulált egyenleglevonás). Folytatod?')) return;
-    
+
     try {
         const res = await fetch(`${API_BASE_URL}/ads/${adId}/premium`, {
             method: 'POST',
@@ -3847,7 +3850,7 @@ async function makeAdPremium(adId) {
         } else {
             showToast('Hiba a kiemelés során!', 'error');
         }
-    } catch(e) {
+    } catch (e) {
         showToast('Hálózati fizetési hiba', 'error');
     }
 }
@@ -3857,166 +3860,14 @@ window.openRatingModal = openRatingModal;
 window.openUserChat = openUserChat;
 window.deleteConversation = deleteConversation; // Expose deleteConversation globally
 
-// ===== USER TO USER CHAT & AI INTEGRATION =====
-let activeChatAdId = null;
-let activeChatReceiverId = null;
-let chatPollingInterval = null;
-let inboxPollingInterval = null;
-
-let lastRenderedChatAdId = null;
-let lastRenderedPartnerId = null;
-
-function openUserChat(adId, receiverId, sellerName, paramAdTitle) {
-    if (!token || !currentUser) {
-        showToast('A chat használatához be kell jelentkezned!', 'error');
-        return;
-    }
-    const modal = document.getElementById('user-chat-modal');
-    if (!modal) return;
-    
-    activeChatAdId = adId;
-    activeChatReceiverId = receiverId; // Helyes ObjectID mostantól
-    
-    document.getElementById('chat-ad-title').textContent = paramAdTitle;
-    document.getElementById('chat-partner-name').textContent = sellerName;
-    
-    const messagesContainer = document.getElementById('chat-message-list');
-    messagesContainer.innerHTML = '<div class="placeholder">Üzenetek betöltése...</div>';
-    
-    modal.classList.add('active');
-    
-    fetchChatMessages();
-    markMessagesAsRead(adId, receiverId);
-    
-    // Start polling
-    if (chatPollingInterval) clearInterval(chatPollingInterval);
-    chatPollingInterval = setInterval(fetchChatMessages, 3000);
-}
-
-function closeUserChat() {
-    document.getElementById('user-chat-modal')?.classList.remove('active');
-    activeChatAdId = null;
-    activeChatReceiverId = null;
-    if (chatPollingInterval) {
-        clearInterval(chatPollingInterval);
-        chatPollingInterval = null;
-    }
-}
-
-document.getElementById('user-chat-close')?.addEventListener('click', closeUserChat);
-
-async function fetchChatMessages() {
-    if (!activeChatAdId) return;
-    
-    try {
-        const res = await fetch(`${API_BASE_URL}/messages/${activeChatAdId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (!res.ok) return;
-        const messages = await res.json();
-        
-        // If there are new unread messages from the OTHER party, mark as read
-        const hasNewIncoming = messages.some(m => !m.isRead && String(m.receiverId._id || m.receiverId) === String(currentUser.id));
-        if (hasNewIncoming) markMessagesAsRead(activeChatAdId, activeChatReceiverId);
-
-        renderUserChatMessages(messages);
-    } catch (err) {
-        console.warn('Hiba az üzenetek lekérésekor');
-        document.getElementById('chat-message-list').innerHTML = '<div class="placeholder">Nem sikerült betölteni az üzeneteket.</div>';
-    }
-}
-
-function renderUserChatMessages(messages) {
-    const container = document.getElementById('chat-message-list');
-    container.innerHTML = '';
-    
-    if (messages.length === 0) {
-        container.innerHTML = '<div style="text-align:center; opacity:0.6; padding:1rem; font-size:0.8rem;">Itt kezdheted el a beszélgetést az eladóval.</div>';
-    } else {
-        messages.forEach(msg => {
-            const senderId = String(msg.senderId._id || msg.senderId);
-            const isMe = senderId === String(currentUser.id);
-            const el = document.createElement('div');
-            el.className = `message ${isMe ? 'user-message' : 'ai-message'}`;
-            el.style.backgroundColor = isMe ? 'var(--primary-color)' : 'rgba(255,255,255,0.05)';
-            el.style.color = isMe ? '#000' : 'var(--text-color)';
-            el.textContent = msg.content;
-            container.appendChild(el);
-        });
-    }
-    container.scrollTop = container.scrollHeight;
-}
-
-document.getElementById('chat-send-btn')?.addEventListener('click', sendUserChatMessage);
-document.getElementById('chat-input-text')?.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') sendUserChatMessage();
-});
-
-async function sendUserChatMessage() {
-    const input = document.getElementById('chat-input-text');
-    const text = input.value.trim();
-    if (!text) return;
-    
-    input.value = '';
-    
-    // Add locally immediately
-    const container = document.getElementById('chat-message-list');
-    if(container.innerHTML.includes('Itt kezdheted el')) container.innerHTML = '';
-    
-    const el = document.createElement('div');
-    el.className = 'message user-message';
-    el.style.backgroundColor = 'var(--primary-color)';
-    el.style.color = '#000';
-    el.textContent = text;
-    container.appendChild(el);
-    container.scrollTop = container.scrollHeight;
-    
-    try {
-        await fetch(`${API_BASE_URL}/messages`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ 
-                receiverId: activeChatReceiverId, // Can be matched safely on backend
-                adId: activeChatAdId,
-                content: text
-            })
-        });
-    } catch (err) {
-        showToast('Hálózati hiba az üzenet küldésekor', 'error');
-    }
-}
-
-window.openUserChat = openUserChat;
-
-// AI Assistant Action in User Chat
-document.getElementById('chat-ask-ai-btn')?.addEventListener('click', async () => {
-    const container = document.getElementById('chat-message-list');
-    
-    // Add simple AI message
-    const elId = 'ai-typing-' + Date.now();
-    const el = document.createElement('div');
-    el.id = elId;
-    el.className = 'message ai-message';
-    el.style.backgroundColor = 'rgba(255,255,255,0.05)';
-    el.innerHTML = '<i>Lunnar AI Asszisztens kapcsolódik...</i>';
-    container.appendChild(el);
-    container.scrollTop = container.scrollHeight;
-    
-    setTimeout(() => {
-        const ad = allCars.find(c => c._id === activeChatAdId || c.id === activeChatAdId);
-        const elRe = document.getElementById(elId);
-        if (elRe) {
-            elRe.innerHTML = `👋 Helló! Én a Lunnar AI Asszisztensed vagyok. Úgy látom az eladó jelenleg nem válaszol. <br><br><b>Amit a hirdetésből tudok a járműről:</b><br>- Típus: ${ad.brand} ${ad.model}<br>- Évjárat: ${ad.year}<br>- Kilométer: ${ad.km} km<br>- Ár: ${formatPrice(ad.price)}<br>- Motor: ${ad.hp} LE, ${ad.fuel}<br><br>Kérdésed van ezekkel kapcsolatban? Tedd fel a fő AI Chat modulban a bal alsó sarokból!`;
-        }
-    }, 1500);
-});
+// ===== USER TO USER CHAT & AI INTEGRATION (Moved to the end) =====
 
 // ===== VISUAL EXTRA & SOCIAL FEATURES =====
 async function submitComment(adId) {
     const textInput = document.getElementById('new-comment-text');
-    if(!textInput) return;
+    if (!textInput) return;
     const text = textInput.value.trim();
-    if(!text) {
+    if (!text) {
         showToast('Kérlek írj be egy hozzászólást', 'error');
         return;
     }
@@ -4032,19 +3883,19 @@ async function submitComment(adId) {
             body: JSON.stringify({ text })
         });
         const data = await res.json();
-        
+
         if (res.ok) {
             showToast('Hozzászólás elküldve!', 'success');
             // Refresh ad
             const adIndex = allCars.findIndex(c => c._id === adId || c.id === adId);
-            if(adIndex > -1) {
+            if (adIndex > -1) {
                 allCars[adIndex].comments = data.comments;
             }
             renderAdDetail(adId);
         } else {
             showToast(data.message || 'Hiba a küldés során', 'error');
         }
-    } catch(err) {
+    } catch (err) {
         showToast('Hálózati hiba', 'error');
     } finally {
         btn.disabled = false;
@@ -4064,15 +3915,15 @@ function extractDominantColor(imageSrc) {
             try {
                 ctx.drawImage(img, 0, 0, 50, 50);
                 const data = ctx.getImageData(0, 0, 50, 50).data;
-                let r=0,g=0,b=0, count=0;
-                for(let i=0; i<data.length; i+=4) {
-                    if (data[i+3] > 128) {
-                        r += data[i]; g += data[i+1]; b += data[i+2]; count++;
+                let r = 0, g = 0, b = 0, count = 0;
+                for (let i = 0; i < data.length; i += 4) {
+                    if (data[i + 3] > 128) {
+                        r += data[i]; g += data[i + 1]; b += data[i + 2]; count++;
                     }
                 }
-                if(count > 0) resolve(`rgba(${Math.round(r/count)}, ${Math.round(g/count)}, ${Math.round(b/count)}, 0.4)`);
+                if (count > 0) resolve(`rgba(${Math.round(r / count)}, ${Math.round(g / count)}, ${Math.round(b / count)}, 0.4)`);
                 else resolve('transparent');
-            } catch(e) {
+            } catch (e) {
                 resolve('transparent');
             }
         };
@@ -4168,7 +4019,7 @@ function renderCompareBar() {
     }
 
     const compareCars = compareList.map(id => allCars.find(c => (c._id === id || c.id === id))).filter(Boolean);
-    
+
     bar.innerHTML = `
         <div class="compare-bar-content">
             <div class="compare-items">
@@ -4243,7 +4094,7 @@ async function fetchUserInbox() {
         });
         if (res.ok) {
             const messages = await res.json();
-            
+
             // Group messages by adId and the OTHER party (sender or receiver)
             const conversations = {};
             messages.forEach(msg => {
@@ -4252,7 +4103,7 @@ async function fetchUserInbox() {
                 const otherPartyId = sId === String(currentUser.id) ? rId : sId;
                 const otherObject = sId === String(currentUser.id) ? msg.receiverId : msg.senderId;
                 const otherPartyName = otherObject.username || 'Partner';
-                
+
                 const adIdStr = String(msg.adId?._id || msg.adId);
                 const key = `${adIdStr}_${otherPartyId}`;
                 if (!conversations[key]) {
@@ -4267,8 +4118,8 @@ async function fetchUserInbox() {
                 }
             });
 
-            const convList = Object.values(conversations).sort((a,b) => b.date - a.date);
-            
+            const convList = Object.values(conversations).sort((a, b) => b.date - a.date);
+
             const currentUnread = convList.filter(c => c.unread).length;
             const lastUnread = parseInt(localStorage.getItem('lunnarLastUnread') || '0');
             if (currentUnread > lastUnread) {
@@ -4327,31 +4178,69 @@ function goToProfileMessages() {
 }
 window.goToProfileMessages = goToProfileMessages;
 
-async function fetchChatMessages() {
-    if (!activeChatAdId) return;
+// ===== USER TO USER CHAT & AI INTEGRATION (UNIFIED) =====
+let activeChatAdId = null;
+let activeChatReceiverId = null;
+let chatPollingInterval = null;
+let inboxPollingInterval = null;
+let lastRenderedChatAdId = null;
+let lastRenderedPartnerId = null;
+let lastUploadedImageData = null;
+
+function openUserChat(adId, receiverId, sellerName, paramAdTitle) {
+    if (!token || !currentUser) {
+        showToast('A chat használatához be kell jelentkezned!', 'error');
+        return;
+    }
+    const modal = document.getElementById('user-chat-modal');
+    if (!modal) return;
     
+    activeChatAdId = adId;
+    activeChatReceiverId = receiverId;
+    
+    document.getElementById('chat-ad-title').textContent = paramAdTitle;
+    document.getElementById('chat-partner-name').textContent = sellerName;
+    
+    const messagesContainer = document.getElementById('chat-message-list');
+    messagesContainer.innerHTML = '<div class="message-loading" style="text-align:center; opacity:0.6; padding:1rem;">Üzenetek betöltése...</div>';
+    
+    modal.classList.add('active');
+    
+    fetchChatMessages();
+    markMessagesAsRead(adId, receiverId);
+    
+    if (chatPollingInterval) clearInterval(chatPollingInterval);
+    chatPollingInterval = setInterval(fetchChatMessages, 3000);
+}
+
+function closeUserChat() {
+    document.getElementById('user-chat-modal')?.classList.remove('active');
+    activeChatAdId = null;
+    activeChatReceiverId = null;
+    if (chatPollingInterval) {
+        clearInterval(chatPollingInterval);
+        chatPollingInterval = null;
+    }
+}
+
+async function fetchChatMessages() {
+    if (!activeChatAdId || !token) return;
     try {
         const res = await fetch(`${API_BASE_URL}/messages/${activeChatAdId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!res.ok) return;
         const messages = await res.json();
-        
-        // If there are new unread messages from the OTHER party, mark as read
         const hasNewIncoming = messages.some(m => !m.isRead && String(m.receiverId._id || m.receiverId) === String(currentUser.id));
         if (hasNewIncoming) markMessagesAsRead(activeChatAdId, activeChatReceiverId);
-
         renderUserChatMessages(messages);
-    } catch (err) {
-        console.warn('Hiba az üzenetek lekérésekor');
-    }
+    } catch (err) { console.warn('Hiba az üzenetek lekérésekor'); }
 }
 
 function renderUserChatMessages(messages) {
     const container = document.getElementById('chat-message-list');
     if (!container || !currentUser) return;
 
-    // Check if we switched conversation
     if (activeChatAdId !== lastRenderedChatAdId || activeChatReceiverId !== lastRenderedPartnerId) {
         container.innerHTML = '';
         lastRenderedChatAdId = activeChatAdId;
@@ -4363,13 +4252,11 @@ function renderUserChatMessages(messages) {
             container.innerHTML = '<div class="placeholder-msg" style="text-align:center; opacity:0.6; padding:1rem; font-size:0.8rem;">Itt kezdheted el a beszélgetést az eladóval.</div>';
         }
     } else {
-        // Remove placeholder if it's there and we have messages
-        const ph = container.querySelector('.placeholder-msg');
+        const ph = container.querySelector('.placeholder-msg, .message-loading');
         if (ph) ph.remove();
 
         const existingMsgIds = new Set(Array.from(container.querySelectorAll('.message')).map(el => el.dataset.msgId));
         let addedNew = false;
-
         messages.forEach(msg => {
             const msgId = String(msg._id || msg.id);
             if (!existingMsgIds.has(msgId)) {
@@ -4380,47 +4267,28 @@ function renderUserChatMessages(messages) {
                 el.style.backgroundColor = isMe ? 'var(--primary-color)' : 'rgba(255,255,255,0.05)';
                 el.style.color = isMe ? '#000' : 'var(--text-color)';
                 el.dataset.msgId = msgId;
-                
                 let contentHtml = '';
-                if (msg.imageUrl) {
-                    contentHtml += `<img src="${msg.imageUrl}" class="chat-image-preview" onclick="window.open('${msg.imageUrl}', '_blank')"><br>`;
-                }
-                if (msg.content) {
-                    contentHtml += `<span>${msg.content}</span>`;
-                }
-                
+                if (msg.imageUrl) contentHtml += `<img src="${msg.imageUrl}" class="chat-image-preview" onclick="window.open('${msg.imageUrl}', '_blank')"><br>`;
+                if (msg.content) contentHtml += `<span>${msg.content}</span>`;
                 el.innerHTML = contentHtml;
                 container.appendChild(el);
                 addedNew = true;
             }
         });
-
-        if (addedNew) {
-            container.scrollTop = container.scrollHeight;
-        }
+        if (addedNew) container.scrollTop = container.scrollHeight;
     }
 }
 
 async function sendUserChatMessage() {
     if (!token || !currentUser || !activeChatAdId || !activeChatReceiverId) return;
-    
     const input = document.getElementById('chat-input-text');
     const text = input.value.trim();
     if (!text && !lastUploadedImageData) return;
-
     try {
         const res = await fetch(`${API_BASE_URL}/messages`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ 
-                receiverId: activeChatReceiverId,
-                adId: activeChatAdId,
-                content: text,
-                imageUrl: lastUploadedImageData
-            })
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ receiverId: activeChatReceiverId, adId: activeChatAdId, content: text, imageUrl: lastUploadedImageData })
         });
         if (res.ok) {
             input.value = '';
@@ -4432,16 +4300,12 @@ async function sendUserChatMessage() {
             const err = await res.json();
             showToast(err.message || 'Nem sikerült elküldeni az üzenetet.', 'error');
         }
-    } catch (err) {
-        showToast('Hálózati hiba az üzenet küldésekor', 'error');
-    }
+    } catch (err) { showToast('Hálózati hiba az üzenet küldésekor', 'error'); }
 }
 
-let lastUploadedImageData = null;
 async function handleChatImageUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
-
     try {
         showToast('Kép feldolgozása...', 'info');
         const compressed = await compressImage(file, 800, 800, 0.7);
@@ -4449,43 +4313,50 @@ async function handleChatImageUpload(e) {
         const imgBtn = document.querySelector('.chat-upload-btn');
         if (imgBtn) imgBtn.textContent = '✅';
         showToast('Kép készen áll a küldésre!', 'success');
-    } catch (err) {
-        console.error(err);
-        showToast('Sikertelen képfeldolgozás', 'error');
-    }
+    } catch (err) { showToast('Sikertelen képfeldolgozás', 'error'); }
 }
 
 async function markMessagesAsRead(adId, otherPartyId) {
     if (!token) return;
     try {
-        await fetch(`${API_BASE_URL}/messages/read/${adId}/${otherPartyId}`, {
-            method: 'PATCH',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+        await fetch(`${API_BASE_URL}/messages/read/${adId}/${otherPartyId}`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${token}` } });
     } catch (err) { console.error(err); }
 }
 
 async function deleteConversation(adId, otherPartyId) {
     if (!confirm('Biztosan törölni szeretnéd ezt a beszélgetést?')) return;
     try {
-        const res = await fetch(`${API_BASE_URL}/messages/conversation/${adId}/${otherPartyId}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) {
-            showToast('Beszélgetés törölve', 'success');
-            fetchUserInbox();
-        }
-    } catch (err) {
-        showToast('Hiba a törlés során', 'error');
-    }
+        const res = await fetch(`${API_BASE_URL}/messages/conversation/${adId}/${otherPartyId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+        if (res.ok) { showToast('Beszélgetés törölve', 'success'); fetchUserInbox(); }
+    } catch (err) { showToast('Hiba a törlés során', 'error'); }
 }
 
+// AI Assistant Action
+async function handleChatAiAssistant() {
+    const container = document.getElementById('chat-message-list');
+    const elId = 'ai-typing-' + Date.now();
+    const el = document.createElement('div');
+    el.id = elId; el.className = 'message ai-message';
+    el.style.backgroundColor = 'rgba(255,255,255,0.05)';
+    el.innerHTML = '<i>Lunnar AI Asszisztens kapcsolódik...</i>';
+    container.appendChild(el);
+    container.scrollTop = container.scrollHeight;
+    setTimeout(() => {
+        const ad = allCars.find(c => c._id === activeChatAdId || c.id === activeChatAdId);
+        const elRe = document.getElementById(elId);
+        if (elRe && ad) {
+            elRe.innerHTML = `👋 Helló! Én a Lunnar AI Asszisztensed vagyok. <br><br><b>Amit a hirdetésből tudok:</b><br>- Típus: ${ad.brand} ${ad.model}<br>- Évjárat: ${ad.year}<br>- Kilométer: ${ad.km} km<br>- Ár: ${formatPrice(ad.price)}<br>- Motor: ${ad.hp} LE, ${ad.fuel}<br><br>Segíthetek még valamiben?`;
+        }
+    }, 1500);
+}
+
+// Global exposure
+window.openUserChat = openUserChat;
+window.deleteConversation = deleteConversation;
+
 // Event Listeners for Chat
-document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('chat-send-btn')?.addEventListener('click', sendUserChatMessage);
-    document.getElementById('chat-input-text')?.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') sendUserChatMessage();
-    });
-    document.getElementById('chat-image-input')?.addEventListener('change', handleChatImageUpload);
-});
+document.getElementById('chat-send-btn')?.addEventListener('click', sendUserChatMessage);
+document.getElementById('chat-input-text')?.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendUserChatMessage(); });
+document.getElementById('chat-image-input')?.addEventListener('change', handleChatImageUpload);
+document.getElementById('user-chat-close')?.addEventListener('click', closeUserChat);
+document.getElementById('chat-ask-ai-btn')?.addEventListener('click', handleChatAiAssistant);

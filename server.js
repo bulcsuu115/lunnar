@@ -381,15 +381,17 @@ app.get('/api/user/stats', authenticateToken, async (req, res) => {
     }
 });
 
-// Messaging
 app.get('/api/messages/:adId', authenticateToken, async (req, res) => {
     try {
+        console.log(`[MSG] Üzenetek lekérése hirdetéshez: ${req.params.adId}, User: ${req.user.userId}`);
         const messages = await Message.find({ 
             adId: req.params.adId,
             $or: [{ senderId: req.user.userId }, { receiverId: req.user.userId }]
         }).populate('senderId', 'username').populate('receiverId', 'username').sort({ createdAt: 1 });
+        console.log(`[MSG] Talált üzenetek száma: ${messages.length}`);
         res.json(messages);
     } catch (err) {
+        console.error('[MSG] Hiba az üzenetek lekérésekor:', err.message);
         res.status(500).json({ message: err.message });
     }
 });
@@ -408,6 +410,7 @@ app.get('/api/messages', authenticateToken, async (req, res) => {
 app.post('/api/messages', authenticateToken, async (req, res) => {
     try {
         const { adId, receiverId, content } = req.body;
+        console.log(`[MSG] Új üzenet: From=${req.user.userId}, To=${receiverId}, Ad=${adId}`);
         const msg = new Message({
             adId,
             senderId: req.user.userId,
@@ -417,6 +420,7 @@ app.post('/api/messages', authenticateToken, async (req, res) => {
         await msg.save();
         res.status(201).json(msg);
     } catch (err) {
+        console.error('[MSG] Hiba az üzenet mentésekor:', err.message);
         res.status(500).json({ message: err.message });
     }
 });

@@ -1292,7 +1292,11 @@ function renderAdDetail(id) {
                             <button class="cta-button primary" style="width:100%;">📞 ELADÓ HÍVÁSA</button>
                         `}
                         <div id="seller-rating-${car._id || car.id}" style="text-align:center; font-size:0.9rem; margin-bottom:0.5rem; color:#fbbf24; font-weight:bold;"></div>
-                        <button class="cta-button secondary" onclick="openUserChat('${String(car._id || car.id)}', '${String(car.owner || car.ownerId || '')}', '${String(car.seller || 'Eladó').replace(/'/g, "\\'")}', '${String(car.brand + ' ' + car.model).replace(/'/g, "\\'")}')" style="width:100%;">💬 CHAT AZ ELADÓVAL</button>
+                        ${(token && currentUser && String(car.owner || car.ownerId) === String(currentUser.id)) ? `
+                            <button class="cta-button secondary" onclick="goToProfileMessages()" style="width:100%;">💬 ÜZENETEK MEGNYITÁSA</button>
+                        ` : `
+                            <button class="cta-button secondary" onclick="openUserChat('${String(car._id || car.id)}', '${String(car.owner || car.ownerId || '')}', '${String(car.seller || 'Eladó').replace(/'/g, "\\'")}', '${String(car.brand + ' ' + car.model).replace(/'/g, "\\'")}')" style="width:100%;">💬 CHAT AZ ELADÓVAL</button>
+                        `}
                         ${token && currentUser ? `
                             <button class="cta-mini" onclick="openRatingModal('${String(car.owner || car.ownerId || '')}', '${String(car.seller || 'Eladó').replace(/'/g, "\\'")}')" style="width:100%; padding:0.8rem; border:1px solid var(--border-color); background:transparent; color:var(--text-color); font-weight:bold; letter-spacing:1px;">⭐ ELADÓ ÉRTÉKELÉSE</button>
                         ` : ''}
@@ -4153,13 +4157,14 @@ async function fetchUserInbox() {
             // Group messages by adId and the OTHER party (sender or receiver)
             const conversations = {};
             messages.forEach(msg => {
-                const sId = (msg.senderId._id || msg.senderId);
-                const rId = (msg.receiverId._id || msg.receiverId);
-                const otherPartyId = sId === currentUser.id ? rId : sId;
-                const otherObject = sId === currentUser.id ? msg.receiverId : msg.senderId;
+                const sId = String(msg.senderId._id || msg.senderId);
+                const rId = String(msg.receiverId._id || msg.receiverId);
+                const otherPartyId = sId === String(currentUser.id) ? rId : sId;
+                const otherObject = sId === String(currentUser.id) ? msg.receiverId : msg.senderId;
                 const otherPartyName = otherObject.username || 'Partner';
                 
-                const key = `${msg.adId?._id || msg.adId}_${otherPartyId}`;
+                const adIdStr = String(msg.adId?._id || msg.adId);
+                const key = `${adIdStr}_${otherPartyId}`;
                 if (!conversations[key]) {
                     conversations[key] = {
                         ad: msg.adId || { brand: 'Ismeretlen', model: 'autó' },
@@ -4167,7 +4172,7 @@ async function fetchUserInbox() {
                         otherPartyName: otherPartyName,
                         lastMessage: msg.content,
                         date: new Date(msg.createdAt),
-                        unread: !msg.isRead && rId === currentUser.id
+                        unread: !msg.isRead && rId === String(currentUser.id)
                     };
                 }
             });
@@ -4210,3 +4215,12 @@ function renderUserInbox(conversations) {
 }
 
 window.fetchUserInbox = fetchUserInbox;
+
+function goToProfileMessages() {
+    window.location.hash = '#profile';
+    setTimeout(() => {
+        const btn = document.querySelector('[data-profile-tab="my-messages"]');
+        if (btn) btn.click();
+    }, 100);
+}
+window.goToProfileMessages = goToProfileMessages;

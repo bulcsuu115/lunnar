@@ -16,6 +16,26 @@
         rel="stylesheet">
     <!-- EmailJS – valódi email küldés frontendből -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <style>
+        /* ===== INBOX / MESSAGES ===== */
+        .inbox-container { display: flex; flex-direction: column; gap: 1rem; }
+        .inbox-item {
+            display: flex; align-items: center; gap: 1.2rem; padding: 1.2rem; border-radius: 12px;
+            background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05);
+            cursor: pointer; transition: all 0.3s ease;
+        }
+        .inbox-item:hover { background: rgba(255, 255, 255, 0.06); border-color: var(--accent-color); transform: translateX(5px); }
+        .inbox-item.unread { border-left: 4px solid var(--accent-color); background: rgba(102, 126, 234, 0.05); }
+        .inbox-ad-img { width: 60px; height: 60px; border-radius: 8px; object-fit: cover; }
+        .inbox-info { flex: 1; min-width: 0; }
+        .inbox-top { display: flex; justify-content: space-between; margin-bottom: 0.3rem; }
+        .inbox-user { font-weight: 700; font-size: 0.95rem; color: var(--text-color); }
+        .inbox-date { font-size: 0.75rem; opacity: 0.5; }
+        .inbox-preview { font-size: 0.85rem; opacity: 0.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .inbox-ad-title { font-size: 0.75rem; color: var(--accent-color, #667eea); margin-top: 0.3rem; font-weight: 600; }
+        body.light-mode .inbox-item { background: rgba(0, 0, 0, 0.02); border-color: rgba(0, 0, 0, 0.05); }
+        body.light-mode .inbox-item:hover { background: rgba(0, 0, 0, 0.04); }
+    </style>
 </head>
 
 <body>
@@ -1045,6 +1065,11 @@
                                 <span>Kedvenceim</span>
                                 <span class="badge-mini" id="stat-favs-count">0</span>
                             </button>
+                            <button class="profile-tab-btn" data-profile-tab="my-messages">
+                                <span class="icon">💬</span>
+                                <span>Üzenetek</span>
+                                <span class="badge-mini" id="stat-messages-count">0</span>
+                            </button>
                             <button class="profile-tab-btn" data-profile-tab="settings">
                                 <span class="icon">⚙️</span>
                                 <span>Beállítások</span>
@@ -1100,6 +1125,17 @@
                             </div>
                             <div id="my-favorites-list" class="car-grid">
                                 <!-- Favorited cars rendered here -->
+                            </div>
+                        </div>
+
+                        <!-- Messages Tab -->
+                        <div class="profile-tab-content" id="profile-tab-my-messages">
+                            <div class="content-header">
+                                <h3>ÜZENETEIM</h3>
+                                <div class="header-line"></div>
+                            </div>
+                            <div id="my-messages-list" class="inbox-container glass" style="padding: 1rem; border-radius: 12px; min-height: 200px;">
+                                <div class="placeholder">BETÖLTÉS...</div>
                             </div>
                         </div>
 

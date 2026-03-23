@@ -3003,9 +3003,10 @@ async function renderProfile() {
     })
     .catch(e => console.log('Hiba a statisztika lekérésekor', e));
 
-    // 3. Render Listings & Favorites
+    // 3. Render Listings, Favorites & Inbox
     fetchMyAds();
     renderProfileFavorites();
+    fetchUserInbox();
 }
 
 let profileTabsInitialized = false;
@@ -3786,10 +3787,10 @@ function openUserChat(adId, receiverId, sellerName, paramAdTitle) {
     activeChatAdId = adId;
     activeChatReceiverId = receiverId; // Helyes ObjectID mostantól
     
-    document.getElementById('user-chat-title').textContent = paramAdTitle;
-    document.getElementById('user-chat-seller-name').textContent = sellerName;
+    document.getElementById('chat-ad-title').textContent = paramAdTitle;
+    document.getElementById('chat-partner-name').textContent = sellerName;
     
-    const messagesContainer = document.getElementById('user-chat-messages');
+    const messagesContainer = document.getElementById('chat-message-list');
     messagesContainer.innerHTML = '<div class="placeholder">Üzenetek betöltése...</div>';
     
     modal.classList.add('active');
@@ -3809,26 +3810,26 @@ async function fetchChatMessages() {
     if (!activeChatAdId) return;
     
     try {
-        const res = await fetch(`${API_BASE_URL}/messages?adId=${activeChatAdId}`, {
+        const res = await fetch(`${API_BASE_URL}/messages/${activeChatAdId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const messages = await res.json();
         renderUserChatMessages(messages);
     } catch (err) {
         console.warn('Hiba az üzenetek lekérésekor');
-        document.getElementById('user-chat-messages').innerHTML = '<div class="placeholder">Nem sikerült betölteni az üzeneteket.</div>';
+        document.getElementById('chat-message-list').innerHTML = '<div class="placeholder">Nem sikerült betölteni az üzeneteket.</div>';
     }
 }
 
 function renderUserChatMessages(messages) {
-    const container = document.getElementById('user-chat-messages');
+    const container = document.getElementById('chat-message-list');
     container.innerHTML = '';
     
     if (messages.length === 0) {
         container.innerHTML = '<div style="text-align:center; opacity:0.6; padding:1rem; font-size:0.8rem;">Itt kezdheted el a beszélgetést az eladóval.</div>';
     } else {
         messages.forEach(msg => {
-            const isMe = msg.senderId === currentUser.id;
+            const isMe = (msg.senderId._id || msg.senderId) === currentUser.id;
             const el = document.createElement('div');
             el.className = `message ${isMe ? 'user-message' : 'ai-message'}`;
             el.style.backgroundColor = isMe ? 'var(--primary-color)' : 'rgba(255,255,255,0.05)';
@@ -3840,20 +3841,20 @@ function renderUserChatMessages(messages) {
     container.scrollTop = container.scrollHeight;
 }
 
-document.getElementById('user-chat-send')?.addEventListener('click', sendUserChatMessage);
-document.getElementById('user-chat-input')?.addEventListener('keypress', (e) => {
+document.getElementById('chat-send-btn')?.addEventListener('click', sendUserChatMessage);
+document.getElementById('chat-input-text')?.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') sendUserChatMessage();
 });
 
 async function sendUserChatMessage() {
-    const input = document.getElementById('user-chat-input');
+    const input = document.getElementById('chat-input-text');
     const text = input.value.trim();
     if (!text) return;
     
     input.value = '';
     
     // Add locally immediately
-    const container = document.getElementById('user-chat-messages');
+    const container = document.getElementById('chat-message-list');
     if(container.innerHTML.includes('Itt kezdheted el')) container.innerHTML = '';
     
     const el = document.createElement('div');
@@ -3882,8 +3883,8 @@ async function sendUserChatMessage() {
 window.openUserChat = openUserChat;
 
 // AI Assistant Action in User Chat
-document.getElementById('user-chat-ai-action')?.addEventListener('click', async () => {
-    const container = document.getElementById('user-chat-messages');
+document.getElementById('chat-ask-ai-btn')?.addEventListener('click', async () => {
+    const container = document.getElementById('chat-message-list');
     
     // Add simple AI message
     const elId = 'ai-typing-' + Date.now();
@@ -4119,3 +4120,77 @@ window.openCompareModal = openCompareModal;
 setTimeout(renderCompareBar, 1000);
 
 init();
+
+async function fetchUserInbox() {
+    if (!token || !currentUser) return;
+    const container = document.getElementById('my-messages-list');
+    const badge = document.getElementById('stat-messages-count');
+    if (!container) return;
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/messages`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+            const messages = await res.json();
+            
+            // Group messages by adId and the OTHER party (sender or receiver)
+            const conversations = {};
+            messages.forEach(msg => {
+                const sId = (msg.senderId._id || msg.senderId);
+                const rId = (msg.receiverId._id || msg.receiverId);
+                const otherPartyId = sId === currentUser.id ? rId : sId;
+                const otherObject = sId === currentUser.id ? msg.receiverId : msg.senderId;
+                const otherPartyName = otherObject.username || 'Partner';
+                
+                const key = `${msg.adId?._id || msg.adId}_${otherPartyId}`;
+                if (!conversations[key]) {
+                    conversations[key] = {
+                        ad: msg.adId || { brand: 'Ismeretlen', model: 'autó' },
+                        otherPartyId: otherPartyId,
+                        otherPartyName: otherPartyName,
+                        lastMessage: msg.content,
+                        date: new Date(msg.createdAt),
+                        unread: !msg.isRead && rId === currentUser.id
+                    };
+                }
+            });
+
+            const convList = Object.values(conversations).sort((a,b) => b.date - a.date);
+            if (badge) badge.textContent = convList.filter(c => c.unread).length || '0';
+            renderUserInbox(convList);
+        }
+    } catch (err) {
+        console.error('Hiba az üzenetek lekérésekor', err);
+    }
+}
+
+function renderUserInbox(conversations) {
+    const container = document.getElementById('my-messages-list');
+    if (!container) return;
+
+    if (conversations.length === 0) {
+        container.innerHTML = '<div class="placeholder">NINCSENEK MÉG ÜZENETEID</div>';
+        return;
+    }
+
+    container.innerHTML = conversations.map(c => {
+        const adTitle = `${c.ad.brand || 'Ismeretlen'} ${c.ad.model || 'Autó'}`;
+        const adImg = c.ad.images && c.ad.images[0] ? c.ad.images[0] : (c.ad.img || 'https://via.placeholder.com/100x70?text=Auto');
+        return `
+            <div class="inbox-item ${c.unread ? 'unread' : ''}" onclick="openUserChat('${c.ad._id || c.ad}', '${String(c.otherPartyId)}', '${c.otherPartyName.replace(/'/g, "\\'")}', '${adTitle.replace(/'/g, "\\'")}')">
+                <img src="${adImg}" class="inbox-ad-img" alt="">
+                <div class="inbox-info">
+                    <div class="inbox-top">
+                        <span class="inbox-user">${c.otherPartyName}</span>
+                        <span class="inbox-date">${c.date.toLocaleString('hu-HU', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                    <div class="inbox-preview">${c.lastMessage}</div>
+                    <div class="inbox-ad-title">${adTitle}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+window.fetchUserInbox = fetchUserInbox;

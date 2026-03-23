@@ -2886,6 +2886,86 @@ function initCompareListeners() {
         });
     }
 
+async function sendUserChatMessage() {
+    if (!token || !currentUser || !activeChatAdId || !activeChatReceiverId) return;
+    
+    const input = document.getElementById('chat-input-text');
+    const text = input.value.trim();
+    if (!text && !lastUploadedImageData) return;
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/messages`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ 
+                receiverId: activeChatReceiverId,
+                adId: activeChatAdId,
+                content: text,
+                imageUrl: lastUploadedImageData
+            })
+        });
+        if (res.ok) {
+            input.value = '';
+            lastUploadedImageData = null;
+            const imgBtn = document.querySelector('.chat-upload-btn');
+            if (imgBtn) imgBtn.textContent = '📷';
+            fetchChatMessages();
+        } else {
+            const err = await res.json();
+            showToast(err.message || 'Nem sikerült elküldeni az üzenetet.', 'error');
+        }
+    } catch (err) {
+        showToast('Hálózati hiba az üzenet küldésekor', 'error');
+    }
+}
+
+let lastUploadedImageData = null;
+async function handleChatImageUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+        showToast('Kép feldolgozása...', 'info');
+        const compressed = await compressImage(file, 800, 800, 0.7);
+        lastUploadedImageData = compressed;
+        const imgBtn = document.querySelector('.chat-upload-btn');
+        if (imgBtn) imgBtn.textContent = '✅';
+        showToast('Kép készen áll a küldésre!', 'success');
+    } catch (err) {
+        console.error(err);
+        showToast('Sikertelen képfeldolgozás', 'error');
+    }
+}
+
+async function markMessagesAsRead(adId, otherPartyId) {
+    if (!token) return;
+    try {
+        await fetch(`${API_BASE_URL}/messages/read/${adId}/${otherPartyId}`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+    } catch (err) { console.error(err); }
+}
+
+async function deleteConversation(adId, otherPartyId) {
+    if (!confirm('Biztosan törölni szeretnéd ezt a beszélgetést?')) return;
+    try {
+        const res = await fetch(`${API_BASE_URL}/messages/conversation/${adId}/${otherPartyId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+            showToast('Beszélgetés törölve', 'success');
+            fetchUserInbox();
+        }
+    } catch (err) {
+        showToast('Hiba a törlés során', 'error');
+    }
+}
+
     const compareClose = document.getElementById('compare-close');
     if (compareClose) {
         compareClose.addEventListener('click', () => {
@@ -3775,12 +3855,16 @@ async function makeAdPremium(adId) {
 window.makeAdPremium = makeAdPremium;
 window.openRatingModal = openRatingModal;
 window.openUserChat = openUserChat;
+window.deleteConversation = deleteConversation; // Expose deleteConversation globally
 
 // ===== USER TO USER CHAT & AI INTEGRATION =====
 let activeChatAdId = null;
 let activeChatReceiverId = null;
 let chatPollingInterval = null;
 let inboxPollingInterval = null;
+
+let lastRenderedChatAdId = null;
+let lastRenderedPartnerId = null;
 
 function openUserChat(adId, receiverId, sellerName, paramAdTitle) {
     if (!token || !currentUser) {
@@ -3802,6 +3886,7 @@ function openUserChat(adId, receiverId, sellerName, paramAdTitle) {
     modal.classList.add('active');
     
     fetchChatMessages();
+    markMessagesAsRead(adId, receiverId);
     
     // Start polling
     if (chatPollingInterval) clearInterval(chatPollingInterval);
@@ -3829,6 +3914,11 @@ async function fetchChatMessages() {
         });
         if (!res.ok) return;
         const messages = await res.json();
+        
+        // If there are new unread messages from the OTHER party, mark as read
+        const hasNewIncoming = messages.some(m => !m.isRead && String(m.receiverId._id || m.receiverId) === String(currentUser.id));
+        if (hasNewIncoming) markMessagesAsRead(activeChatAdId, activeChatReceiverId);
+
         renderUserChatMessages(messages);
     } catch (err) {
         console.warn('Hiba az üzenetek lekérésekor');
@@ -4178,7 +4268,16 @@ async function fetchUserInbox() {
             });
 
             const convList = Object.values(conversations).sort((a,b) => b.date - a.date);
-            if (badge) badge.textContent = convList.filter(c => c.unread).length || '0';
+            
+            const currentUnread = convList.filter(c => c.unread).length;
+            const lastUnread = parseInt(localStorage.getItem('lunnarLastUnread') || '0');
+            if (currentUnread > lastUnread) {
+                showToast('Új üzeneted érkezett!', 'info');
+                // Play notification sound if possible? 
+            }
+            localStorage.setItem('lunnarLastUnread', currentUnread);
+
+            if (badge) badge.textContent = currentUnread || '0';
             renderUserInbox(convList);
         }
     } catch (err) {
@@ -4199,15 +4298,18 @@ function renderUserInbox(conversations) {
         const adTitle = `${c.ad.brand || 'Ismeretlen'} ${c.ad.model || 'Autó'}`;
         const adImg = c.ad.images && c.ad.images[0] ? c.ad.images[0] : (c.ad.img || 'https://via.placeholder.com/100x70?text=Auto');
         return `
-            <div class="inbox-item ${c.unread ? 'unread' : ''}" onclick="openUserChat('${c.ad._id || c.ad}', '${String(c.otherPartyId)}', '${c.otherPartyName.replace(/'/g, "\\'")}', '${adTitle.replace(/'/g, "\\'")}')">
-                <img src="${adImg}" class="inbox-ad-img" alt="">
-                <div class="inbox-info">
-                    <div class="inbox-top">
-                        <span class="inbox-user">${c.otherPartyName}</span>
-                        <span class="inbox-date">${c.date.toLocaleString('hu-HU', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+            <div class="inbox-item-wrapper">
+                <button class="inbox-delete-btn" onclick="event.stopPropagation(); deleteConversation('${c.ad._id || c.ad}', '${String(c.otherPartyId)}')" title="Beszélgetés törlése">×</button>
+                <div class="inbox-item ${c.unread ? 'unread' : ''}" onclick="openUserChat('${c.ad._id || c.ad}', '${String(c.otherPartyId)}', '${c.otherPartyName.replace(/'/g, "\\'")}', '${adTitle.replace(/'/g, "\\'")}')">
+                    <img src="${adImg}" class="inbox-ad-img" alt="">
+                    <div class="inbox-info">
+                        <div class="inbox-top">
+                            <span class="inbox-user">${c.otherPartyName}</span>
+                            <span class="inbox-date">${c.date.toLocaleString('hu-HU', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                        <div class="inbox-preview">${c.lastMessage}</div>
+                        <div class="inbox-ad-title">${adTitle}</div>
                     </div>
-                    <div class="inbox-preview">${c.lastMessage}</div>
-                    <div class="inbox-ad-title">${adTitle}</div>
                 </div>
             </div>
         `;
@@ -4224,3 +4326,166 @@ function goToProfileMessages() {
     }, 100);
 }
 window.goToProfileMessages = goToProfileMessages;
+
+async function fetchChatMessages() {
+    if (!activeChatAdId) return;
+    
+    try {
+        const res = await fetch(`${API_BASE_URL}/messages/${activeChatAdId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) return;
+        const messages = await res.json();
+        
+        // If there are new unread messages from the OTHER party, mark as read
+        const hasNewIncoming = messages.some(m => !m.isRead && String(m.receiverId._id || m.receiverId) === String(currentUser.id));
+        if (hasNewIncoming) markMessagesAsRead(activeChatAdId, activeChatReceiverId);
+
+        renderUserChatMessages(messages);
+    } catch (err) {
+        console.warn('Hiba az üzenetek lekérésekor');
+    }
+}
+
+function renderUserChatMessages(messages) {
+    const container = document.getElementById('chat-message-list');
+    if (!container || !currentUser) return;
+
+    // Check if we switched conversation
+    if (activeChatAdId !== lastRenderedChatAdId || activeChatReceiverId !== lastRenderedPartnerId) {
+        container.innerHTML = '';
+        lastRenderedChatAdId = activeChatAdId;
+        lastRenderedPartnerId = activeChatReceiverId;
+    }
+
+    if (messages.length === 0) {
+        if (container.children.length === 0) {
+            container.innerHTML = '<div class="placeholder-msg" style="text-align:center; opacity:0.6; padding:1rem; font-size:0.8rem;">Itt kezdheted el a beszélgetést az eladóval.</div>';
+        }
+    } else {
+        // Remove placeholder if it's there and we have messages
+        const ph = container.querySelector('.placeholder-msg');
+        if (ph) ph.remove();
+
+        const existingMsgIds = new Set(Array.from(container.querySelectorAll('.message')).map(el => el.dataset.msgId));
+        let addedNew = false;
+
+        messages.forEach(msg => {
+            const msgId = String(msg._id || msg.id);
+            if (!existingMsgIds.has(msgId)) {
+                const senderId = String(msg.senderId._id || msg.senderId);
+                const isMe = senderId === String(currentUser.id);
+                const el = document.createElement('div');
+                el.className = `message ${isMe ? 'user-message' : 'ai-message'}`;
+                el.style.backgroundColor = isMe ? 'var(--primary-color)' : 'rgba(255,255,255,0.05)';
+                el.style.color = isMe ? '#000' : 'var(--text-color)';
+                el.dataset.msgId = msgId;
+                
+                let contentHtml = '';
+                if (msg.imageUrl) {
+                    contentHtml += `<img src="${msg.imageUrl}" class="chat-image-preview" onclick="window.open('${msg.imageUrl}', '_blank')"><br>`;
+                }
+                if (msg.content) {
+                    contentHtml += `<span>${msg.content}</span>`;
+                }
+                
+                el.innerHTML = contentHtml;
+                container.appendChild(el);
+                addedNew = true;
+            }
+        });
+
+        if (addedNew) {
+            container.scrollTop = container.scrollHeight;
+        }
+    }
+}
+
+async function sendUserChatMessage() {
+    if (!token || !currentUser || !activeChatAdId || !activeChatReceiverId) return;
+    
+    const input = document.getElementById('chat-input-text');
+    const text = input.value.trim();
+    if (!text && !lastUploadedImageData) return;
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/messages`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ 
+                receiverId: activeChatReceiverId,
+                adId: activeChatAdId,
+                content: text,
+                imageUrl: lastUploadedImageData
+            })
+        });
+        if (res.ok) {
+            input.value = '';
+            lastUploadedImageData = null;
+            const imgBtn = document.querySelector('.chat-upload-btn');
+            if (imgBtn) imgBtn.textContent = '📷';
+            fetchChatMessages();
+        } else {
+            const err = await res.json();
+            showToast(err.message || 'Nem sikerült elküldeni az üzenetet.', 'error');
+        }
+    } catch (err) {
+        showToast('Hálózati hiba az üzenet küldésekor', 'error');
+    }
+}
+
+let lastUploadedImageData = null;
+async function handleChatImageUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+        showToast('Kép feldolgozása...', 'info');
+        const compressed = await compressImage(file, 800, 800, 0.7);
+        lastUploadedImageData = compressed;
+        const imgBtn = document.querySelector('.chat-upload-btn');
+        if (imgBtn) imgBtn.textContent = '✅';
+        showToast('Kép készen áll a küldésre!', 'success');
+    } catch (err) {
+        console.error(err);
+        showToast('Sikertelen képfeldolgozás', 'error');
+    }
+}
+
+async function markMessagesAsRead(adId, otherPartyId) {
+    if (!token) return;
+    try {
+        await fetch(`${API_BASE_URL}/messages/read/${adId}/${otherPartyId}`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+    } catch (err) { console.error(err); }
+}
+
+async function deleteConversation(adId, otherPartyId) {
+    if (!confirm('Biztosan törölni szeretnéd ezt a beszélgetést?')) return;
+    try {
+        const res = await fetch(`${API_BASE_URL}/messages/conversation/${adId}/${otherPartyId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+            showToast('Beszélgetés törölve', 'success');
+            fetchUserInbox();
+        }
+    } catch (err) {
+        showToast('Hiba a törlés során', 'error');
+    }
+}
+
+// Event Listeners for Chat
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('chat-send-btn')?.addEventListener('click', sendUserChatMessage);
+    document.getElementById('chat-input-text')?.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendUserChatMessage();
+    });
+    document.getElementById('chat-image-input')?.addEventListener('change', handleChatImageUpload);
+});

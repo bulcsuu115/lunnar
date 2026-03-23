@@ -97,7 +97,8 @@ const messageSchema = new mongoose.Schema({
     adId: { type: mongoose.Schema.Types.ObjectId, ref: 'Ad', required: true },
     senderId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     receiverId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    content: { type: String, required: true },
+    content: { type: String, required: false },
+    imageUrl: { type: String, default: null },
     isRead: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now }
 });
@@ -409,18 +410,53 @@ app.get('/api/messages', authenticateToken, async (req, res) => {
 
 app.post('/api/messages', authenticateToken, async (req, res) => {
     try {
-        const { adId, receiverId, content } = req.body;
+        const { adId, receiverId, content, imageUrl } = req.body;
         console.log(`[MSG] Új üzenet: From=${req.user.userId}, To=${receiverId}, Ad=${adId}`);
         const msg = new Message({
             adId,
             senderId: req.user.userId,
             receiverId,
-            content
+            content,
+            imageUrl
         });
         await msg.save();
         res.status(201).json(msg);
     } catch (err) {
         console.error('[MSG] Hiba az üzenet mentésekor:', err.message);
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Mark messages as read
+app.patch('/api/messages/read/:adId/:otherPartyId', authenticateToken, async (req, res) => {
+    try {
+        await Message.updateMany(
+            { 
+                adId: req.params.adId, 
+                senderId: req.params.otherPartyId, 
+                receiverId: req.user.userId, 
+                isRead: false 
+            },
+            { $set: { isRead: true } }
+        );
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Delete whole conversation
+app.delete('/api/messages/conversation/:adId/:otherPartyId', authenticateToken, async (req, res) => {
+    try {
+        await Message.deleteMany({
+            adId: req.params.adId,
+            $or: [
+                { senderId: req.user.userId, receiverId: req.params.otherPartyId },
+                { senderId: req.params.otherPartyId, receiverId: req.user.userId }
+            ]
+        });
+        res.json({ success: true, message: 'Beszélgetés törölve' });
+    } catch (err) {
         res.status(500).json({ message: err.message });
     }
 });

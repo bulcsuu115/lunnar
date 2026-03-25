@@ -99,6 +99,7 @@ const messageSchema = new mongoose.Schema({
     receiverId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     content: { type: String, required: false },
     imageUrl: { type: String, default: null },
+    images: { type: [String], default: [] },
     isRead: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now }
 });
@@ -134,6 +135,26 @@ app.post('/api/auth/register', async (req, res) => {
     }
 });
 
+app.post('/api/auth/check-email', async (req, res) => {
+    try {
+        const user = await User.findOne({ email: req.body.email.toLowerCase() });
+        if (!user) return res.status(404).json({ message: 'Email nem található' });
+        res.json({ exists: true });
+    } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
+app.post('/api/auth/reset-password', async (req, res) => {
+    try {
+        const { email, newPassword } = req.body;
+        const user = await User.findOne({ email: email.toLowerCase() });
+        if (!user) return res.status(404).json({ message: 'Felhasználó nem található' });
+
+        user.password = await bcrypt.hash(newPassword, 10);
+        await user.save();
+        res.json({ message: 'Jelszó sikeresen módosítva' });
+    } catch (err) { res.status(500).json({ message: err.message }); }
+});
+
 app.post('/api/auth/login', async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -142,9 +163,9 @@ app.post('/api/auth/login', async (req, res) => {
             return res.status(401).json({ message: 'Érvénytelen email vagy jelszó' });
         }
         const token = jwt.sign({ userId: user._id, username: user.username }, jwtSecret, { expiresIn: '7d' });
-        res.json({ 
-            token, 
-            username: user.username, 
+        res.json({
+            token,
+            username: user.username,
             favorites: user.favorites,
             isVerified: user.isVerified,
             userId: user._id
@@ -214,7 +235,7 @@ app.patch('/api/ads/:id', authenticateToken, async (req, res) => {
     try {
         const ad = await Ad.findById(req.params.id);
         if (!ad) return res.status(404).json({ message: 'Hirdetés nem található' });
-        
+
         // Ownership check
         if (ad.owner && ad.owner.toString() !== req.user.userId) {
             return res.status(403).json({ message: 'Nincs jogosultságod a hirdetés módosításához' });
@@ -276,14 +297,14 @@ app.post('/api/users/:id/rate', authenticateToken, async (req, res) => {
     try {
         const { score, comment } = req.body; // 1 to 5
         if (score < 1 || score > 5) return res.status(400).json({ message: 'Érvénytelen pontszám' });
-        
+
         const seller = await User.findById(req.params.id);
         if (!seller) return res.status(404).json({ message: 'Eladó nem található' });
-        
+
         // Prevent self rating
         if (seller._id.toString() === req.user.userId) return res.status(400).json({ message: 'Saját magadat nem értékelheted' });
 
-        seller.ratings.push({ 
+        seller.ratings.push({
             raterId: req.user.userId,
             raterName: req.user.username,
             score,
@@ -292,7 +313,7 @@ app.post('/api/users/:id/rate', authenticateToken, async (req, res) => {
         seller.totalRatings += 1;
         const totalScore = seller.ratings.reduce((acc, r) => acc + r.score, 0);
         seller.sellerRating = totalScore / seller.totalRatings;
-        
+
         await seller.save();
         res.json({ message: 'Értékelés sikeresen mentve!', newRating: seller.sellerRating });
     } catch (err) {
@@ -327,7 +348,7 @@ app.post('/api/ads/:id/premium', authenticateToken, async (req, res) => {
         const ad = await Ad.findById(req.params.id);
         if (!ad) return res.status(404).json({ message: 'Hirdetés nem található' });
         if (ad.owner && ad.owner.toString() !== req.user.userId) return res.status(403).json({ message: 'Nincs jogosultságod' });
-        
+
         ad.isPremium = true;
         await ad.save();
         res.json({ message: 'Hirdetés kiemelve!' });
@@ -363,7 +384,7 @@ app.get('/api/user/stats', authenticateToken, async (req, res) => {
     try {
         const ads = await Ad.find({ owner: req.user.userId });
         const totalViews = ads.reduce((acc, ad) => acc + ad.views, 0);
-        
+
         const adIds = ads.map(ad => ad._id.toString());
         const totalFavoritesResult = await User.aggregate([
             { $unwind: "$favorites" },
@@ -371,7 +392,7 @@ app.get('/api/user/stats', authenticateToken, async (req, res) => {
             { $count: "count" }
         ]);
         const totalFavorites = totalFavoritesResult.length > 0 ? totalFavoritesResult[0].count : 0;
-        
+
         res.json({
             totalAds: ads.length,
             totalViews: totalViews,
@@ -382,17 +403,17 @@ app.get('/api/user/stats', authenticateToken, async (req, res) => {
     }
 });
 
-app.get('/api/messages/:adId', authenticateToken, async (req, res) => {
+app.get('/api/messages/:adId/:otherPartyId', authenticateToken, async (req, res) => {
     try {
-        console.log(`[MSG] Üzenetek lekérése hirdetéshez: ${req.params.adId}, User: ${req.user.userId}`);
-        const messages = await Message.find({ 
+        const messages = await Message.find({
             adId: req.params.adId,
-            $or: [{ senderId: req.user.userId }, { receiverId: req.user.userId }]
+            $or: [
+                { senderId: req.user.userId, receiverId: req.params.otherPartyId },
+                { senderId: req.params.otherPartyId, receiverId: req.user.userId }
+            ]
         }).populate('senderId', 'username').populate('receiverId', 'username').sort({ createdAt: 1 });
-        console.log(`[MSG] Talált üzenetek száma: ${messages.length}`);
         res.json(messages);
     } catch (err) {
-        console.error('[MSG] Hiba az üzenetek lekérésekor:', err.message);
         res.status(500).json({ message: err.message });
     }
 });
@@ -404,22 +425,65 @@ app.get('/api/messages', authenticateToken, async (req, res) => {
         }).populate('adId', 'brand model images views isPremium').populate('senderId', 'username').populate('receiverId', 'username').sort({ createdAt: -1 });
         res.json(messages);
     } catch (err) {
-         res.status(500).json({ message: err.message });
+        res.status(500).json({ message: err.message });
     }
 });
 
 app.post('/api/messages', authenticateToken, async (req, res) => {
     try {
-        const { adId, receiverId, content, imageUrl } = req.body;
-        console.log(`[MSG] Új üzenet: From=${req.user.userId}, To=${receiverId}, Ad=${adId}`);
+        const { adId, receiverId, content, imageUrl, images } = req.body;
         const msg = new Message({
             adId,
             senderId: req.user.userId,
             receiverId,
             content,
-            imageUrl
+            imageUrl,
+            images: images || []
         });
         await msg.save();
+
+        // --- Email Értesítés Küldése (EmailJS REST API) ---
+        (async () => {
+            try {
+                const receiver = await User.findById(receiverId);
+                const sender = await User.findById(req.user.userId);
+                const ad = await Ad.findById(adId);
+
+                if (receiver && receiver.email && ad) {
+                    const emailData = {
+                        service_id: process.env.EMAILJS_MSG_SERVICE_ID || 'service_uvauvze',
+                        template_id: process.env.EMAILJS_MSG_TEMPLATE_ID || 'template_new_message',
+                        user_id: process.env.EMAILJS_MSG_PUBLIC_KEY,
+                        accessToken: process.env.EMAILJS_MSG_PRIVATE_KEY, // Required for server-side
+                        template_params: {
+                            to_email: receiver.email,
+                            sender_name: sender ? sender.username : 'Érdeklődő',
+                            ad_title: `${ad.brand} ${ad.model}`,
+                            title: `${ad.brand} ${ad.model}`, // For compatibility with Subject: {{title}}
+                            message: content || 'Képet küldött.',
+                            reply_to: sender ? sender.email : ''
+                        }
+                    };
+
+                    const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(emailData)
+                    });
+
+                    if (response.ok) {
+                        console.log(`[EMAIL] Értesítés elküldve: ${receiver.email}`);
+                    } else {
+                        const errorText = await response.text();
+                        console.warn(`[EMAIL] EmailJS hiba: ${errorText}`);
+                    }
+                }
+            } catch (emailErr) {
+                console.error('[EMAIL] Hiba az értesítés küldésekor:', emailErr.message);
+            }
+        })();
+        // ------------------------------------------------
+
         res.status(201).json(msg);
     } catch (err) {
         console.error('[MSG] Hiba az üzenet mentésekor:', err.message);
@@ -431,11 +495,11 @@ app.post('/api/messages', authenticateToken, async (req, res) => {
 app.patch('/api/messages/read/:adId/:otherPartyId', authenticateToken, async (req, res) => {
     try {
         await Message.updateMany(
-            { 
-                adId: req.params.adId, 
-                senderId: req.params.otherPartyId, 
-                receiverId: req.user.userId, 
-                isRead: false 
+            {
+                adId: req.params.adId,
+                senderId: req.params.otherPartyId,
+                receiverId: req.user.userId,
+                isRead: false
             },
             { $set: { isRead: true } }
         );

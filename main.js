@@ -96,8 +96,19 @@ window.addEventListener('scroll', () => {
 function animateStars() {
     if (!starCanvas || !starCtx || !heroEl) return;
 
-    // Use cached rect or initial rect if null
-    if (!heroRectCache) updateHeroRect();
+// ===== UTILS =====
+function escapeHTML(str) {
+    if (!str) return "";
+    return str.replace(/[&<>"']/g, function(m) {
+        return {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[m];
+    });
+}
     const rect = heroRectCache;
 
     if (rect && rect.bottom > 0) {
@@ -416,7 +427,9 @@ const CAR_IMAGES = [
 ];
 
 // ===== BACKEND CONFIG =====
-const API_BASE_URL = '/api'; // Use relative path for production (Render)
+const API_BASE_URL = window.location.protocol === 'file:' 
+    ? 'http://localhost:5000/api' 
+    : '/api'; 
 
 // ===== GENERATE CARS =====
 function generateCars(count = 12) {
@@ -995,6 +1008,59 @@ function filterCars() {
     sortCars();
     renderCars(filteredCars);
     updateSearchCount();
+    saveCurrentFilters();
+}
+
+function saveCurrentFilters() {
+    const filters = {
+        brand: document.getElementById('brand-select').value,
+        model: document.getElementById('model-select').value,
+        fuel: document.getElementById('fuel-select')?.value,
+        yearFrom: document.getElementById('year-from').value,
+        yearTo: document.getElementById('year-to').value,
+        priceFrom: document.getElementById('price-from').value,
+        priceTo: document.getElementById('price-to').value,
+        kmFrom: document.getElementById('km-from')?.value,
+        kmTo: document.getElementById('km-to')?.value,
+        city: document.getElementById('city-search')?.value,
+        distance: document.getElementById('distance-select')?.value,
+        sort: document.getElementById('sort-select').value
+    };
+    localStorage.setItem('lunnarLastFilters', JSON.stringify(filters));
+}
+
+function loadAndApplyFilters() {
+    const data = localStorage.getItem('lunnarLastFilters');
+    if (!data) return;
+    try {
+        const f = JSON.parse(data);
+        const set = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.value = val; };
+        
+        set('brand-select', f.brand);
+        const brandSelect = document.getElementById('brand-select');
+        if (brandSelect) brandSelect.dispatchEvent(new Event('change'));
+        
+        setTimeout(() => {
+            set('model-select', f.model);
+            set('fuel-select', f.fuel);
+            set('year-from', f.yearFrom);
+            set('year-to', f.yearTo);
+            set('price-from', f.priceFrom);
+            set('price-to', f.priceTo);
+            set('km-from', f.kmFrom);
+            set('km-to', f.kmTo);
+            set('city-search', f.city);
+            set('distance-select', f.distance);
+            set('sort-select', f.sort);
+            
+            // Rebuild searchable selects if they exist
+            document.querySelectorAll('select').forEach(s => {
+                if (s._searchableSelect) s._searchableSelect.rebuild();
+            });
+            
+            filterCars();
+        }, 100);
+    } catch (e) { console.warn('Hiba a szűrők betöltésekor', e); }
 }
 
 function sortCars() {
@@ -1369,9 +1435,9 @@ function renderAdDetail(id) {
                 t.classList.toggle('active', i === currentIndex);
             });
 
-            // Auto-scroll thumbnail into view
+            // Auto-scroll thumbnail into view (using 'nearest' to prevent horizontal page jumps)
             if (thumbs[currentIndex]) {
-                thumbs[currentIndex].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                thumbs[currentIndex].scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
             }
         }
 
@@ -2377,7 +2443,7 @@ function generateLocalToken(userId) {
 // ========================================================
 const EMAILJS_CONFIG = {
     PUBLIC_KEY: 'O6bdBo6yyIOOiouPr',       // pl. 'aBcDeFgHiJkLmNoP'
-    SERVICE_ID: 'service_zlzjea5',        // pl. 'service_abc123'
+    SERVICE_ID: 'service_zlzjea5',        // Eredeti Auth fiók
     VERIFY_TEMPLATE_ID: 'template_nhph4mk',// pl. 'template_abc123'
     RESET_TEMPLATE_ID: 'template_hbxe8w3', // pl. 'template_xyz789'
 };
@@ -2746,12 +2812,18 @@ async function initAuth() {
     if (forgotForm) forgotForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const email = document.getElementById('forgot-email').value.trim().toLowerCase();
-        const submitBtn = forgotForm.querySelector('.auth-submit-btn');
-        const users = getUsers();
-        const user = users.find(u => u.email === email);
+        // Check email on backend
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.querySelector('span').textContent = 'ELLENŐRZÉS...'; }
+        
+        const checkRes = await fetch(`${API_BASE_URL}/auth/check-email`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
 
-        if (!user) {
+        if (!checkRes.ok) {
             showToast('Nem található fiók ezzel az email címmel!', 'error');
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.querySelector('span').textContent = 'KÓD KÜLDÉSE'; }
             return;
         }
 
@@ -2783,7 +2855,7 @@ async function initAuth() {
 
     // STEP 2: Verify code and set new password
     const forgotResetForm = document.getElementById('forgot-reset-form');
-    if (forgotResetForm) forgotResetForm.addEventListener('submit', (e) => {
+    if (forgotResetForm) forgotResetForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const email = document.getElementById('forgot-email').value.trim().toLowerCase();
         const codeInput = document.getElementById('forgot-code').value.trim();
@@ -2792,15 +2864,23 @@ async function initAuth() {
         if (!pendingResets[email]) { showToast('Hiba: nincs aktív visszaállítási kérelem.', 'error'); return; }
         if (codeInput !== pendingResets[email]) { showToast('Helytelen kód! Próbáld újra.', 'error'); return; }
         if (newPw.length < 6) { showToast('A jelszó legalább 6 karakter legyen!', 'error'); return; }
-        if (!/[A-Z]/.test(newPw)) { showToast('A jelszónak nagybetűt kell tartalmaznia!', 'error'); return; }
-        if (!/[0-9]/.test(newPw)) { showToast('A jelszónak számot kell tartalmaznia!', 'error'); return; }
 
-        const users = getUsers();
-        const userIdx = users.findIndex(u => u.email === email);
-        if (userIdx === -1) { showToast('Felhasználó nem található!', 'error'); return; }
+        try {
+            const res = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, newPassword: newPw })
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                showToast(data.message || 'Hiba a jelszó módosítása során', 'error');
+                return;
+            }
+        } catch (err) {
+            showToast('Szerver hiba a jelszó visszaállításakor', 'error');
+            return;
+        }
 
-        users[userIdx].passwordHash = simpleHash(newPw);
-        saveUsers(users);
         delete pendingResets[email];
 
         forgotModal.classList.remove('active');
@@ -3592,14 +3672,15 @@ function initAiChat() {
         if (filters.bodyType) { const s = document.getElementById('body-select'); if (s) s.value = filters.bodyType; }
         if (filters.color) { const s = document.getElementById('color-select'); if (s) s.value = filters.color; }
         if (filters.yearFrom) {
+            const y = Number(filters.yearFrom);
             const ySel = document.getElementById('year-from');
-            if (ySel) {
-                let exists = Array.from(ySel.options).some(o => o.value === String(filters.yearFrom));
+            if (ySel && !isNaN(y)) {
+                let exists = Array.from(ySel.options).some(o => o.value === String(y));
                 if (!exists) {
-                    const opt = new Option(String(filters.yearFrom), filters.yearFrom);
+                    const opt = new Option(String(y), y);
                     let inserted = false;
                     for (let i = 1; i < ySel.options.length; i++) {
-                        if (parseInt(ySel.options[i].value) < filters.yearFrom) {
+                        if (parseInt(ySel.options[i].value) < y) {
                             ySel.insertBefore(opt, ySel.options[i]);
                             inserted = true;
                             break;
@@ -3607,23 +3688,25 @@ function initAiChat() {
                     }
                     if (!inserted) ySel.add(opt);
                 }
-                ySel.value = filters.yearFrom;
+                ySel.value = y;
             }
         }
         if (filters.kmTo) {
+            const km = Number(filters.kmTo);
             const kmSel = document.getElementById('km-to');
-            if (kmSel) {
-                let exists = Array.from(kmSel.options).some(o => o.value === String(filters.kmTo));
-                if (!exists) kmSel.add(new Option(filters.kmTo.toLocaleString() + ' km', filters.kmTo));
-                kmSel.value = filters.kmTo;
+            if (kmSel && !isNaN(km)) {
+                let exists = Array.from(kmSel.options).some(o => Number(o.value) === km);
+                if (!exists) kmSel.add(new Option(km.toLocaleString() + ' km', km));
+                kmSel.value = km;
             }
         }
         if (filters.priceTo) {
+            const p = Number(filters.priceTo);
             const pSel = document.getElementById('price-to');
-            if (pSel) {
-                let exists = Array.from(pSel.options).some(o => parseInt(o.value) === filters.priceTo);
-                if (!exists) pSel.add(new Option(formatPrice(filters.priceTo), filters.priceTo));
-                pSel.value = filters.priceTo;
+            if (pSel && !isNaN(p)) {
+                let exists = Array.from(pSel.options).some(o => Number(o.value) === p);
+                if (!exists) pSel.add(new Option(formatPrice(p), p));
+                pSel.value = p;
             }
         }
 
@@ -3950,6 +4033,7 @@ async function init() {
     initBrands();
     await fetchAds();
     initSearch();
+    loadAndApplyFilters();
     initModal();
     initSubmission();
     await initAuth();
@@ -4137,8 +4221,11 @@ async function fetchUserInbox() {
             localStorage.setItem('lunnarLastUnread', currentUnread);
 
             if (badge) badge.textContent = currentUnread || '0';
+            const unreadText = currentUnread > 0 ? currentUnread : '';
             const mainBadge = document.getElementById('main-messages-badge');
-            if (mainBadge) mainBadge.textContent = currentUnread > 0 ? currentUnread : '';
+            const navBadge = document.getElementById('nav-messages-badge');
+            if (mainBadge) mainBadge.textContent = unreadText;
+            if (navBadge) navBadge.textContent = unreadText;
             renderUserInbox(convList);
         }
     } catch (err) {
@@ -4156,19 +4243,19 @@ function renderUserInbox(conversations) {
     }
 
     container.innerHTML = conversations.map(c => {
-        const adTitle = `${c.ad.brand || 'Ismeretlen'} ${c.ad.model || 'Autó'}`;
+        const adTitle = escapeHTML(`${c.ad.brand || 'Ismeretlen'} ${c.ad.model || 'Autó'}`);
         const adImg = c.ad.images && c.ad.images[0] ? c.ad.images[0] : (c.ad.img || 'https://via.placeholder.com/100x70?text=Auto');
         return `
             <div class="inbox-item-wrapper">
                 <button class="inbox-delete-btn" onclick="event.stopPropagation(); deleteConversation('${c.ad._id || c.ad}', '${String(c.otherPartyId)}')" title="Beszélgetés törlése">×</button>
-                <div class="inbox-item ${c.unread ? 'unread' : ''}" onclick="openUserChat('${c.ad._id || c.ad}', '${String(c.otherPartyId)}', '${c.otherPartyName.replace(/'/g, "\\'")}', '${adTitle.replace(/'/g, "\\'")}')">
+                <div class="inbox-item ${c.unread ? 'unread' : ''}" onclick="openUserChat('${c.ad._id || c.ad}', '${String(c.otherPartyId)}', '${escapeHTML(c.otherPartyName).replace(/'/g, "\\'")}', '${adTitle.replace(/'/g, "\\'")}')">
                     <img src="${adImg}" class="inbox-ad-img" alt="">
                     <div class="inbox-info">
                         <div class="inbox-top">
-                            <span class="inbox-user">${c.otherPartyName}</span>
+                            <span class="inbox-user">${escapeHTML(c.otherPartyName)}</span>
                             <span class="inbox-date">${c.date.toLocaleString('hu-HU', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
-                        <div class="inbox-preview">${c.lastMessage}</div>
+                        <div class="inbox-preview">${escapeHTML(c.lastMessage)}</div>
                         <div class="inbox-ad-title">${adTitle}</div>
                     </div>
                 </div>
@@ -4240,7 +4327,7 @@ function closeUserChat() {
 async function fetchChatMessages() {
     if (!activeChatAdId || !token) return;
     try {
-        const res = await fetch(`${API_BASE_URL}/messages/${activeChatAdId}`, {
+        const res = await fetch(`${API_BASE_URL}/messages/${activeChatAdId}/${activeChatReceiverId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!res.ok) return;
@@ -4282,8 +4369,16 @@ function renderUserChatMessages(messages) {
                 el.style.color = isMe ? '#000' : 'var(--text-color)';
                 el.dataset.msgId = msgId;
                 let contentHtml = '';
-                if (msg.imageUrl) contentHtml += `<img src="${msg.imageUrl}" class="chat-image-preview" onclick="window.open('${msg.imageUrl}', '_blank')"><br>`;
-                if (msg.content) contentHtml += `<span>${msg.content}</span>`;
+                if (msg.images && msg.images.length > 0) {
+                    contentHtml += `<div class="chat-images-grid" style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:5px;">`;
+                    msg.images.forEach(img => {
+                        contentHtml += `<img src="${img}" class="chat-image-preview" onclick="window.open('${img}', '_blank')" style="width:80px; height:60px; object-fit:cover; border-radius:4px; cursor:pointer;">`;
+                    });
+                    contentHtml += `</div>`;
+                } else if (msg.imageUrl) {
+                    contentHtml += `<img src="${msg.imageUrl}" class="chat-image-preview" onclick="window.open('${msg.imageUrl}', '_blank')" style="max-width:200px; border-radius:8px; cursor:pointer; margin-bottom:5px;"><br>`;
+                }
+                if (msg.content) contentHtml += `<span>${escapeHTML(msg.content)}</span>`;
                 el.innerHTML = contentHtml;
                 container.appendChild(el);
                 addedNew = true;
@@ -4302,11 +4397,16 @@ async function sendUserChatMessage() {
         const res = await fetch(`${API_BASE_URL}/messages`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ receiverId: activeChatReceiverId, adId: activeChatAdId, content: text, imageUrl: lastUploadedImageData })
+            body: JSON.stringify({
+                receiverId: activeChatReceiverId,
+                adId: activeChatAdId,
+                content: text,
+                images: uploadedChatImages
+            })
         });
         if (res.ok) {
             input.value = '';
-            lastUploadedImageData = null;
+            uploadedChatImages = [];
             const imgBtn = document.querySelector('.chat-upload-btn');
             if (imgBtn) imgBtn.textContent = '📷';
             fetchChatMessages();
@@ -4317,16 +4417,17 @@ async function sendUserChatMessage() {
     } catch (err) { showToast('Hálózati hiba az üzenet küldésekor', 'error'); }
 }
 
+let uploadedChatImages = [];
 async function handleChatImageUpload(e) {
-    const file = e.target.files[0];
-    if (!file) return;
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
     try {
-        showToast('Kép feldolgozása...', 'info');
-        const compressed = await compressImage(file, 800, 800, 0.7);
-        lastUploadedImageData = compressed;
+        showToast(`${files.length} kép feldolgozása...`, 'info');
+        const promises = files.map(file => compressImage(file, 800, 800, 0.7));
+        uploadedChatImages = await Promise.all(promises);
         const imgBtn = document.querySelector('.chat-upload-btn');
-        if (imgBtn) imgBtn.textContent = '✅';
-        showToast('Kép készen áll a küldésre!', 'success');
+        if (imgBtn) imgBtn.textContent = `✅ (${files.length})`;
+        showToast('Képek készen állnak a küldésre!', 'success');
     } catch (err) { showToast('Sikertelen képfeldolgozás', 'error'); }
 }
 
@@ -4359,7 +4460,7 @@ async function handleChatAiAssistant() {
         const ad = allCars.find(c => c._id === activeChatAdId || c.id === activeChatAdId);
         const elRe = document.getElementById(elId);
         if (elRe && ad) {
-            elRe.innerHTML = `👋 Helló! Én a Lunnar AI Asszisztensed vagyok. <br><br><b>Amit a hirdetésből tudok:</b><br>- Típus: ${ad.brand} ${ad.model}<br>- Évjárat: ${ad.year}<br>- Kilométer: ${ad.km} km<br>- Ár: ${formatPrice(ad.price)}<br>- Motor: ${ad.hp} LE, ${ad.fuel}<br><br>Segíthetek még valamiben?`;
+            elRe.innerHTML = `👋 Helló! Én a Lunnar AI Asszisztensed vagyok. <br><br><b>Amit a hirdetésből tudok:</b><br>- Típus: ${escapeHTML(ad.brand)} ${escapeHTML(ad.model)}<br>- Évjárat: ${ad.year}<br>- Kilométer: ${ad.km} km<br>- Ár: ${formatPrice(ad.price)}<br>- Motor: ${ad.hp} LE, ${ad.fuel}<br><br>Segíthetek még valamiben?`;
         }
     }, 1500);
 }

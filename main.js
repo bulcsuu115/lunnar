@@ -4339,9 +4339,6 @@ function openUserChat(adId, receiverId, sellerName, paramAdTitle) {
     activeChatAdId = adId;
     activeChatReceiverId = receiverId;
     
-    console.log(`[Chat] INITIALIZING: Ad=${adId}, Partner=${receiverId}`);
-    if (!token) { console.warn('[Chat] No token found!'); showToast('Kérjük jelentkezzen be!', 'info'); return; }
-
     const titleEl = document.getElementById('chat-ad-title');
     const partnerEl = document.getElementById('chat-partner-name');
     if (titleEl) titleEl.textContent = paramAdTitle || 'Chat';
@@ -4375,8 +4372,6 @@ function closeUserChat() {
 
 async function fetchChatMessages() {
     if (!activeChatAdId || !activeChatReceiverId || !token) return;
-    
-    console.log(`[Chat] Fetching messages: Ad=${activeChatAdId}, Partner=${activeChatReceiverId}`);
     try {
         const res = await fetch(`${API_BASE_URL}/messages/${activeChatAdId}/${activeChatReceiverId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -4416,7 +4411,7 @@ function renderUserChatMessages(messages) {
         const ph = container.querySelector('.placeholder-msg, .message-loading');
         if (ph) ph.remove();
 
-        const existingMsgIds = new Set(Array.from(container.querySelectorAll('.message')).map(el => el.dataset.msgId));
+        const existingMsgIds = new Set(Array.from(container.querySelectorAll('.message')).map(el => el.dataset.id));
         let addedNew = false;
         messages.forEach(msg => {
             const msgId = String(msg._id || msg.id);
@@ -4446,11 +4441,24 @@ function renderUserChatMessages(messages) {
     }
 }
 
+let isSendingChatMessage = false;
+
 async function sendUserChatMessage() {
+    if (isSendingChatMessage) return;
     if (!token || !currentUser || !activeChatAdId || !activeChatReceiverId) return;
+    
     const input = document.getElementById('chat-input-text');
     const text = input.value.trim();
-    if (!text && !lastUploadedImageData) return;
+    if (!text && (!uploadedChatImages || uploadedChatImages.length === 0)) return;
+    
+    isSendingChatMessage = true;
+    const sendBtn = document.getElementById('chat-send-btn');
+    const oldBtnText = sendBtn ? sendBtn.textContent : 'Küldés';
+    if (sendBtn) {
+        sendBtn.disabled = true;
+        sendBtn.textContent = '...';
+    }
+    
     try {
         const res = await fetch(`${API_BASE_URL}/messages`, {
             method: 'POST',
@@ -4472,7 +4480,16 @@ async function sendUserChatMessage() {
             const err = await res.json();
             showToast(err.message || 'Nem sikerült elküldeni az üzenetet.', 'error');
         }
-    } catch (err) { showToast('Hálózati hiba az üzenet küldésekor', 'error'); }
+    } catch (err) { 
+        console.error('[Chat] POST failed:', err);
+        showToast('Hálózati hiba az üzenet küldésekor', 'error'); 
+    } finally {
+        isSendingChatMessage = false;
+        if (sendBtn) {
+            sendBtn.disabled = false;
+            sendBtn.textContent = oldBtnText;
+        }
+    }
 }
 
 let uploadedChatImages = [];
@@ -4505,24 +4522,6 @@ async function deleteConversation(adId, otherPartyId) {
 }
 
 // AI Assistant Action
-async function handleChatAiAssistant() {
-    const container = document.getElementById('chat-message-list');
-    const elId = 'ai-typing-' + Date.now();
-    const el = document.createElement('div');
-    el.id = elId; el.className = 'message ai-message';
-    el.style.backgroundColor = 'rgba(255,255,255,0.05)';
-    el.innerHTML = '<i>Lunnar AI Asszisztens kapcsolódik...</i>';
-    container.appendChild(el);
-    container.scrollTop = container.scrollHeight;
-    setTimeout(() => {
-        const ad = allCars.find(c => c._id === activeChatAdId || c.id === activeChatAdId);
-        const elRe = document.getElementById(elId);
-        if (elRe && ad) {
-            elRe.innerHTML = `👋 Helló! Én a Lunnar AI Asszisztensed vagyok. <br><br><b>Amit a hirdetésből tudok:</b><br>- Típus: ${escapeHTML(ad.brand)} ${escapeHTML(ad.model)}<br>- Évjárat: ${ad.year}<br>- Kilométer: ${ad.km} km<br>- Ár: ${formatPrice(ad.price)}<br>- Motor: ${ad.hp} LE, ${ad.fuel}<br><br>Segíthetek még valamiben?`;
-        }
-    }, 1500);
-}
-
 
 // ===== SEARCH HISTORY LOGIC =====
 const HISTORY_STORAGE_KEY = 'lunnarSearchHistory';
@@ -4717,11 +4716,15 @@ window.toggleAdmin = toggleAdmin;
 window.editAd = editAd;
 
 // Event Listeners for Chat
-document.getElementById('chat-send-btn')?.addEventListener('click', sendUserChatMessage);
-document.getElementById('chat-input-text')?.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendUserChatMessage(); });
+document.getElementById('chat-send-btn')?.addEventListener('click', (e) => { e.preventDefault(); sendUserChatMessage(); });
+document.getElementById('chat-input-text')?.addEventListener('keypress', (e) => { 
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        sendUserChatMessage(); 
+    }
+});
 document.getElementById('chat-image-input')?.addEventListener('change', handleChatImageUpload);
 document.getElementById('user-chat-close')?.addEventListener('click', closeUserChat);
-document.getElementById('chat-ask-ai-btn')?.addEventListener('click', handleChatAiAssistant);
 
 // Initialize history
 document.addEventListener('DOMContentLoaded', () => {

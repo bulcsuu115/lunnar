@@ -4308,14 +4308,19 @@ function openUserChat(adId, receiverId, sellerName, paramAdTitle) {
     activeChatAdId = adId;
     activeChatReceiverId = receiverId;
     
-    console.log(`[Chat] Opening chat: Ad=${adId}, Partner=${receiverId}, Me=${currentUser?.id || currentUser?._id}`);
+    console.log(`[Chat] INITIALIZING: Ad=${adId}, Partner=${receiverId}`);
+    if (!token) { console.warn('[Chat] No token found!'); showToast('Kérjük jelentkezzen be!', 'info'); return; }
 
-    document.getElementById('chat-ad-title').textContent = paramAdTitle || 'Chat';
-    document.getElementById('chat-partner-name').textContent = sellerName || 'Partner';
+    const titleEl = document.getElementById('chat-ad-title');
+    const partnerEl = document.getElementById('chat-partner-name');
+    if (titleEl) titleEl.textContent = paramAdTitle || 'Chat';
+    if (partnerEl) partnerEl.textContent = sellerName || 'Partner';
     
     const messagesContainer = document.getElementById('chat-message-list');
     if (messagesContainer) {
         messagesContainer.innerHTML = '<div class="message-loading">Üzenetek betöltése...</div>';
+    } else {
+        console.error('[Chat] chat-message-list NOT FOUND in DOM!');
     }
     
     modal.classList.add('active');
@@ -4687,4 +4692,24 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const clearBtnMain = document.getElementById('clear-all-main-history');
     if (clearBtnMain) clearBtnMain.addEventListener('click', clearAllSearchHistory);
+    
+    // Debug connection on load
+    checkServerConnection();
 });
+
+async function checkServerConnection() {
+    console.log('[Debug] Checking server connection at:', API_BASE_URL);
+    try {
+        const res = await fetch(`${API_BASE_URL}/health`);
+        if (res.ok) {
+            const data = await res.json();
+            console.log('[Debug] Server OK:', data);
+        } else {
+            console.warn('[Debug] Server Error:', res.status);
+            showToast('Hálózati hiba a szerverrel: ' + res.status, 'error');
+        }
+    } catch (err) {
+        console.error('[Debug] Server connection FAILED:', err.message);
+        showToast('Nem sikerült kapcsolódni a szerverhez!', 'error');
+    }
+}

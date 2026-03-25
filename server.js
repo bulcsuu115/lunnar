@@ -21,6 +21,10 @@ app.get('/', (req, res) => {
     res.sendFile(__dirname + '/index.html');
 });
 
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', time: new Date() });
+});
+
 // Health check endpoint for cron jobs (heartbeat)
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok' });
@@ -433,11 +437,17 @@ app.get('/api/messages/:adId/:otherPartyId', authenticateToken, async (req, res)
 
 app.get('/api/messages', authenticateToken, async (req, res) => {
     try {
+        const myId = req.user.userId;
+        console.log(`[API] Inbox fetch for user: ${myId}`);
+
         const messages = await Message.find({
-            $or: [{ senderId: req.user.userId }, { receiverId: req.user.userId }]
+            $or: [{ senderId: myId }, { receiverId: myId }]
         }).populate('adId', 'brand model images views isPremium').populate('senderId', 'username').populate('receiverId', 'username').sort({ createdAt: -1 });
+        
+        console.log(`[API] Found ${messages.length} messages for inbox.`);
         res.json(messages);
     } catch (err) {
+        console.error(`[API] Inbox fetch ERROR:`, err);
         res.status(500).json({ message: err.message });
     }
 });

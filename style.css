@@ -660,10 +660,9 @@ body.light-mode .subtitle {
 /* ===== SEARCH CONTAINER ===== */
 .search-container {
     padding: 2.5rem;
-    background: var(--card-bg);
-    backdrop-filter: blur(20px);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-main);
+    background: #0A0A0B;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
     max-width: 1200px;
     margin: 0 auto;
     box-shadow: var(--shadow-premium);
@@ -679,7 +678,7 @@ body.light-mode .search-container {
 
 .search-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 1.5rem;
     margin-bottom: 2rem;
     text-align: left;
@@ -705,11 +704,12 @@ body.light-mode .search-container {
 }
 
 .input-group label {
-    font-size: 0.7rem;
-    font-family: var(--font-mono);
-    color: #888;
+    font-size: 0.75rem;
+    font-family: var(--font-heading);
+    color: #94a3b8;
     text-transform: uppercase;
-    letter-spacing: 2px;
+    letter-spacing: 1.5px;
+    font-weight: 600;
 }
 
 body.light-mode .input-group label {
@@ -807,8 +807,8 @@ body.light-mode .input-group label {
 
 .input-group input,
 .input-group select {
-    background: rgba(15, 23, 42, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #0B0E14;
+    border: 1px solid rgba(255, 255, 255, 0.06);
     padding: 0.8rem 1rem;
     color: #fff;
     font-family: var(--font-main);
@@ -875,8 +875,8 @@ body.light-mode .input-group label {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: rgba(15, 23, 42, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #0B0E14;
+    border: 1px solid rgba(255, 255, 255, 0.06);
     padding: 0.8rem 1rem;
     color: #fff;
     font-family: var(--font-main);
@@ -934,8 +934,8 @@ body.light-mode .input-group label {
 
 .searchable-select-search input {
     width: 100%;
-    background: rgba(15, 23, 42, 0.8);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #0B0E14;
+    border: 1px solid rgba(255, 255, 255, 0.06);
     padding: 8px 12px;
     color: #fff;
     border-radius: 4px;

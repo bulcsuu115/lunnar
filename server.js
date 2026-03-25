@@ -447,84 +447,26 @@ app.post('/api/messages', authenticateToken, async (req, res) => {
         const { adId, receiverId, content, imageUrl, images } = req.body;
         const myId = req.user.userId;
 
-        console.log(`[API] POST message: Ad=${adId}, Receiver=${receiverId}, Sender=${myId}, Content="${content?.substring(0, 20)}..."`);
+        console.log(`[API] POST message: Ad=${adId}, Receiver=${receiverId}, Sender=${myId}`);
 
-        if (!mongoose.Types.ObjectId.isValid(adId) || !mongoose.Types.ObjectId.isValid(receiverId)) {
-            console.error(`[API] Message POST failed: Invalid IDs. Ad=${adId}, Receiver=${receiverId}`);
-            return res.status(400).json({ message: 'Invalid advertisement or receiver ID.' });
+        if (!adId || !receiverId) {
+             return res.status(400).json({ message: 'Missing adId or receiverId' });
         }
 
         const msg = new Message({
             adId,
             senderId: myId,
             receiverId,
-            content,
+            content: content || '',
             imageUrl,
             images: images || []
         });
         await msg.save();
+        
+        console.log(`[API] Message saved: ${msg._id}`);
         res.status(201).json(msg);
-
-        // --- Email Értesítés Küldése (Elkülönítve, nem blokkolja a választ) ---
-        (async () => {
-            try {
-                const receiver = await User.findById(receiverId);
-                const sender = await User.findById(req.user.userId);
-                const ad = await Ad.findById(adId);
-
-                if (receiver && receiver.email && ad) {
-                    const emailData = JSON.stringify({
-                        service_id: process.env.EMAILJS_MSG_SERVICE_ID || 'service_piq91zy',
-                        template_id: process.env.EMAILJS_MSG_TEMPLATE_ID || 'template_p2thcur',
-                        user_id: process.env.EMAILJS_MSG_PUBLIC_KEY || 'KbS9mUQba27kGlvuD',
-                        accessToken: process.env.EMAILJS_MSG_PRIVATE_KEY || 'aXMwuzwj76A4U-xF-uwq0',
-                        template_params: {
-                            to_email: receiver.email,
-                            sender_name: sender ? sender.username : 'Érdeklődő',
-                            ad_title: `${ad.brand} ${ad.model}`,
-                            title: `${ad.brand} ${ad.model}`,
-                            message: content || 'Képet küldött.',
-                            reply_to: sender ? sender.email : ''
-                        }
-                    });
-
-                    const options = {
-                        hostname: 'api.emailjs.com',
-                        path: '/api/v1.0/email/send',
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Content-Length': Buffer.byteLength(emailData)
-                        },
-                        timeout: 10000 // 10 mp timeout
-                    };
-
-                    const reqMail = https.request(options, (resMail) => {
-                        let resData = '';
-                        resMail.on('data', (chunk) => { resData += chunk; });
-                        resMail.on('end', () => {
-                            if (resMail.statusCode === 200) {
-                                console.log(`[EMAIL] Értesítés elküldve: ${receiver.email}`);
-                            } else {
-                                console.warn(`[EMAIL] EmailJS hiba (${resMail.statusCode}): ${resData}`);
-                            }
-                        });
-                    });
-
-                    reqMail.on('error', (e) => {
-                        console.error(`[EMAIL] Hálózati hiba: ${e.message}`);
-                    });
-
-                    reqMail.write(emailData);
-                    reqMail.end();
-                }
-            } catch (emailErr) {
-                console.error('[EMAIL] Háttér hiba:', emailErr.message);
-            }
-        })();
-        // ------------------------------------------------
     } catch (err) {
-        console.error('[MSG] Hiba az üzenet mentésekor:', err.message);
+        console.error(`[API] Message save ERROR:`, err);
         res.status(500).json({ message: err.message });
     }
 });

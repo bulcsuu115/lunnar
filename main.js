@@ -4381,9 +4381,7 @@ function renderUserChatMessages(messages) {
                 const isMe = sId === myId;
                 const el = document.createElement('div');
                 el.className = `message ${isMe ? 'user-message' : 'ai-message'}`;
-                el.style.backgroundColor = isMe ? 'var(--primary-color)' : 'rgba(255,255,255,0.05)';
-                el.style.color = isMe ? '#000' : 'var(--text-color)';
-                el.dataset.msgId = msgId;
+                el.dataset.id = msgId;
                 let contentHtml = '';
                 if (msg.images && msg.images.length > 0) {
                     contentHtml += `<div class="chat-images-grid" style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:5px;">`;

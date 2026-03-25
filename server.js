@@ -53,8 +53,6 @@ const userSchema = new mongoose.Schema({
         params: mongoose.Schema.Types.Mixed,
         createdAt: { type: Date, default: Date.now }
     }],
-    resetCode: { type: String, default: null },
-    resetCodeExpires: { type: Date, default: null },
     createdAt: { type: Date, default: Date.now }
 });
 
@@ -100,7 +98,7 @@ const messageSchema = new mongoose.Schema({
     senderId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     receiverId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     content: { type: String, required: false },
-    images: [String],
+    imageUrl: { type: String, default: null },
     isRead: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now }
 });
@@ -153,53 +151,6 @@ app.post('/api/auth/login', async (req, res) => {
         });
     } catch (err) {
         res.status(500).json({ message: 'Szerver hiba a bejelentkezés során' });
-    }
-});
-
-// Forgot Password - Generate code
-app.post('/api/auth/forgot-password', async (req, res) => {
-    try {
-        const { email } = req.body;
-        const user = await User.findOne({ email });
-        if (!user) {
-            return res.status(404).json({ message: 'Nem található felhasználó ezzel az email címmel.' });
-        }
-
-        const code = Math.floor(100000 + Math.random() * 900000).toString();
-        user.resetCode = code;
-        user.resetCodeExpires = Date.now() + 3600000; // 1 hour
-        await user.save();
-
-        console.log(`[AUTH] Jelszó visszaállítási kód generálva: ${email} -> ${code}`);
-        res.json({ message: 'Visszaállítási kód generálva', code }); // Return code to frontend for EmailJS
-    } catch (err) {
-        res.status(500).json({ message: 'Hiba a kód generálása során' });
-    }
-});
-
-// Reset Password - Verify code and update
-app.post('/api/auth/reset-password', async (req, res) => {
-    try {
-        const { email, code, newPassword } = req.body;
-        const user = await User.findOne({ 
-            email, 
-            resetCode: code,
-            resetCodeExpires: { $gt: Date.now() }
-        });
-
-        if (!user) {
-            return res.status(400).json({ message: 'Érvénytelen vagy lejárt visszaállítási kód.' });
-        }
-
-        user.password = await bcrypt.hash(newPassword, 10);
-        user.resetCode = null;
-        user.resetCodeExpires = null;
-        await user.save();
-
-        console.log(`[AUTH] Jelszó sikeresen visszaállítva: ${email}`);
-        res.json({ message: 'Jelszó sikeresen megváltoztatva!' });
-    } catch (err) {
-        res.status(500).json({ message: 'Hiba a jelszó visszaállítása során' });
     }
 });
 
@@ -433,24 +384,15 @@ app.get('/api/user/stats', authenticateToken, async (req, res) => {
 
 app.get('/api/messages/:adId', authenticateToken, async (req, res) => {
     try {
-        const { otherPartyId } = req.query;
-        let query = { adId: req.params.adId };
-        
-        if (otherPartyId) {
-            query.$or = [
-                { senderId: req.user.userId, receiverId: otherPartyId },
-                { senderId: otherPartyId, receiverId: req.user.userId }
-            ];
-        } else {
-            query.$or = [{ senderId: req.user.userId }, { receiverId: req.user.userId }];
-        }
-
-        const messages = await Message.find(query)
-            .populate('senderId', 'username')
-            .populate('receiverId', 'username')
-            .sort({ createdAt: 1 });
+        console.log(`[MSG] Üzenetek lekérése hirdetéshez: ${req.params.adId}, User: ${req.user.userId}`);
+        const messages = await Message.find({ 
+            adId: req.params.adId,
+            $or: [{ senderId: req.user.userId }, { receiverId: req.user.userId }]
+        }).populate('senderId', 'username').populate('receiverId', 'username').sort({ createdAt: 1 });
+        console.log(`[MSG] Talált üzenetek száma: ${messages.length}`);
         res.json(messages);
     } catch (err) {
+        console.error('[MSG] Hiba az üzenetek lekérésekor:', err.message);
         res.status(500).json({ message: err.message });
     }
 });
@@ -468,14 +410,14 @@ app.get('/api/messages', authenticateToken, async (req, res) => {
 
 app.post('/api/messages', authenticateToken, async (req, res) => {
     try {
-        const { adId, receiverId, content, images } = req.body;
+        const { adId, receiverId, content, imageUrl } = req.body;
         console.log(`[MSG] Új üzenet: From=${req.user.userId}, To=${receiverId}, Ad=${adId}`);
         const msg = new Message({
             adId,
             senderId: req.user.userId,
             receiverId,
             content,
-            images: images || []
+            imageUrl
         });
         await msg.save();
         res.status(201).json(msg);

@@ -934,15 +934,6 @@ function filterCars() {
     const searchCity = document.getElementById('city-search')?.value.trim();
     const distanceLimit = parseInt(document.getElementById('distance-select')?.value) || 0;
 
-    // Persist filters to localStorage
-    const filtersToSave = {
-        brand, model, fuel, transmission, bodyStyle, condition, color,
-        yearFrom, yearTo, priceFrom, priceTo, kmFrom, kmTo, hpFrom, hpTo,
-        searchCity, distanceLimit,
-        sort: document.getElementById('sort-select')?.value
-    };
-    localStorage.setItem('lunnarSearchFilters', JSON.stringify(filtersToSave));
-
     // Find target city coords if provided
     let targetCoords = null;
     if (searchCity === 'Jelenlegi helyzetem' && window.userCoords) {
@@ -1220,8 +1211,8 @@ function renderAdDetail(id) {
             <a href="#home" class="back-link">← Vissza a kereséshez</a>
             <div class="detail-header-flex">
                 <div class="detail-title-area">
-                    <h1 class="detail-title">${escapeHTML(car.brand)} ${escapeHTML(car.model)}</h1>
-                    <p class="detail-subtitle">${car.year} · ${escapeHTML(car.fuel)} · ${escapeHTML(car.transmission)}</p>
+                    <h1 class="detail-title">${car.brand} ${car.model}</h1>
+                    <p class="detail-subtitle">${car.year} · ${car.fuel} · ${car.transmission}</p>
                 </div>
                 <div class="detail-price-area">
                     <div class="detail-price">${formatPrice(car.price)}</div>
@@ -1255,17 +1246,17 @@ function renderAdDetail(id) {
                         <div class="spec-item"><span>🐎 Teljesítmény</span><strong>${car.hp} LE</strong></div>
                         <div class="spec-item"><span>🛣️ Futott km</span><strong>${formatKm(car.km)}</strong></div>
                         <div class="spec-item"><span>📅 Évjárat</span><strong>${car.year}</strong></div>
-                        <div class="spec-item"><span>⛽ Üzemanyag</span><strong>${escapeHTML(car.fuel)}</strong></div>
-                        <div class="spec-item"><span>⚙️ Váltó</span><strong>${escapeHTML(car.transmission)}</strong></div>
-                        <div class="spec-item"><span>🚗 Karosszéria</span><strong>${escapeHTML(car.bodyType || '-')}</strong></div>
-                        <div class="spec-item"><span>🎨 Szín</span><strong>${escapeHTML(car.color || '-')}</strong></div>
-                        <div class="spec-item"><span>💎 Állapot</span><strong>${escapeHTML(car.condition || '-')}</strong></div>
+                        <div class="spec-item"><span>⛽ Üzemanyag</span><strong>${car.fuel}</strong></div>
+                        <div class="spec-item"><span>⚙️ Váltó</span><strong>${car.transmission}</strong></div>
+                        <div class="spec-item"><span>🚗 Karosszéria</span><strong>${car.bodyType || '-'}</strong></div>
+                        <div class="spec-item"><span>🎨 Szín</span><strong>${car.color || '-'}</strong></div>
+                        <div class="spec-item"><span>💎 Állapot</span><strong>${car.condition || '-'}</strong></div>
                         ${car.ccm ? `<div class="spec-item"><span>🔧 Hengerűrtartalom</span><strong>${car.ccm} ccm</strong></div>` : ''}
-                        <div class="spec-item"><span>📍 Település</span><strong>${escapeHTML(car.city)}</strong></div>
+                        <div class="spec-item"><span>📍 Település</span><strong>${car.city}</strong></div>
                         ${car.vin ? `<div class="spec-item" style="grid-column: 1/-1;">
-                            <span>🔍 Alvázszám (VIN)</span><strong>${escapeHTML(car.vin)}</strong>
+                            <span>🔍 Alvázszám (VIN)</span><strong>${car.vin}</strong>
                             <div style="display:inline-block; margin-left:10px;">
-                                <button class="cta-mini" onclick="window.open('https://www.carvertical.com/hu/check?vin=${escapeHTML(car.vin)}', '_blank')" style="padding:4px 10px; font-size:0.75rem; background:#005bea; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">Lekérdezés a carVerticalon 🛡️</button>
+                                <button class="cta-mini" onclick="window.open('https://www.carvertical.com/hu/check?vin=${car.vin}', '_blank')" style="padding:4px 10px; font-size:0.75rem; background:#005bea; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">Lekérdezés a carVerticalon 🛡️</button>
                             </div>
                         </div>` : ''}
                     </div>
@@ -1281,17 +1272,11 @@ function renderAdDetail(id) {
                         `}
                         <div id="seller-rating-${car._id || car.id}" style="text-align:center; font-size:0.9rem; margin-bottom:0.5rem; color:#fbbf24; font-weight:bold;"></div>
                         ${(token && currentUser && String(car.owner || car.ownerId) === String(currentUser.id)) ? `
-                            <div class="owner-actions" style="display:flex; flex-direction:column; gap:0.5rem; width:100%;">
-                                <button class="cta-button secondary" onclick="goToProfileMessages()" style="width:100%;">💬 ÜZENETEK MEGNYITÁSA</button>
-                                <div style="display:flex; gap:0.5rem;">
-                                    <button class="cta-button" onclick="editAd('${car._id || car.id}')" style="flex:1; background:var(--accent-color); color:white; border:none; padding:0.8rem; font-weight:bold;">✏️ SZERKESZTÉS</button>
-                                    <button class="cta-button" onclick="deleteAd('${car._id || car.id}')" style="flex:1; background:#dc2626; color:white; border:none; padding:0.8rem; font-weight:bold;">🗑️ TÖRLÉS</button>
-                                </div>
-                            </div>
+                            <button class="cta-button secondary" onclick="goToProfileMessages()" style="width:100%;">💬 ÜZENETEK MEGNYITÁSA</button>
                         ` : `
                             <button class="cta-button secondary" onclick="openUserChat('${String(car._id || car.id)}', '${String(car.owner || car.ownerId || '')}', '${String(car.seller || 'Eladó').replace(/'/g, "\\'")}', '${String(car.brand + ' ' + car.model).replace(/'/g, "\\'")}')" style="width:100%;">💬 CHAT AZ ELADÓVAL</button>
                         `}
-                        ${(token && currentUser && String(car.owner || car.ownerId) !== String(currentUser.id)) ? `
+                        ${token && currentUser ? `
                             <button class="cta-mini" onclick="openRatingModal('${String(car.owner || car.ownerId || '')}', '${String(car.seller || 'Eladó').replace(/'/g, "\\'")}')" style="width:100%; padding:0.8rem; border:1px solid var(--border-color); background:transparent; color:var(--text-color); font-weight:bold; letter-spacing:1px;">⭐ ELADÓ ÉRTÉKELÉSE</button>
                         ` : ''}
                         ${car.email ? `<p style="margin-top: 0.5rem; text-align:center; opacity: 0.7; font-size: 0.9rem;">📧 ${car.email}</p>` : ''}
@@ -1311,13 +1296,13 @@ function renderAdDetail(id) {
                 <div class="comment-list" id="comment-list-container">
                     ${(car.comments || []).map(c => `
                         <div class="comment-item">
-                            <div class="comment-avatar">${escapeHTML(c.username.charAt(0).toUpperCase())}</div>
+                            <div class="comment-avatar">${c.username.charAt(0).toUpperCase()}</div>
                             <div class="comment-content">
                                 <div class="comment-header">
-                                    <span>${escapeHTML(c.username)}</span>
+                                    <span>${c.username}</span>
                                     <span>${new Date(c.createdAt).toLocaleDateString('hu-HU', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
                                 </div>
-                                <div class="comment-text">${escapeHTML(c.text)}</div>
+                                <div class="comment-text">${c.text}</div>
                             </div>
                         </div>
                     `).join('')}
@@ -1344,7 +1329,7 @@ function renderAdDetail(id) {
                         const comments = usr.ratings.filter(r => r.comment && r.comment.length > 0);
                         if (comments.length > 0) {
                             const last = comments[comments.length - 1];
-                            el.innerHTML += `<div style="font-size:0.8rem; color:var(--text-color); opacity:0.8; margin-top:0.4rem; line-height:1.2; font-style:italic;">"${escapeHTML(last.comment)}"<br>— ${escapeHTML(last.raterName)}</div>`;
+                            el.innerHTML += `<div style="font-size:0.8rem; color:var(--text-color); opacity:0.8; margin-top:0.4rem; line-height:1.2; font-style:italic;">"${last.comment}"<br>— ${last.raterName}</div>`;
                         }
                     }
                 } else if (el) {
@@ -1384,10 +1369,9 @@ function renderAdDetail(id) {
                 t.classList.toggle('active', i === currentIndex);
             });
 
-            // Auto-scroll thumbnail into view (Custom stable version)
-            if (thumbs[currentIndex] && thumbRow) {
-                const scrollLeft = thumbs[currentIndex].offsetLeft - (thumbRow.offsetWidth / 2) + (thumbs[currentIndex].offsetWidth / 2);
-                thumbRow.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+            // Auto-scroll thumbnail into view
+            if (thumbs[currentIndex]) {
+                thumbs[currentIndex].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
             }
         }
 
@@ -1609,22 +1593,16 @@ function initHeaderScroll() {
 // ===== HAMBURGER MENU =====
 function initHamburger() {
     const btn = document.getElementById('hamburger');
-    const overlay = document.getElementById('cyber-menu-overlay');
-    
-    if (!btn || !overlay) return;
-
-    function toggleMenu() {
-        const isOpen = btn.classList.toggle('active');
-        overlay.classList.toggle('active');
-        document.body.style.overflow = isOpen ? 'hidden' : '';
-    }
-
-    btn.addEventListener('click', toggleMenu);
-
-    // Close on link click
-    overlay.querySelectorAll('a').forEach(a => {
+    const nav = document.getElementById('nav-links');
+    if (!btn || !nav) return;
+    btn.addEventListener('click', () => {
+        btn.classList.toggle('active');
+        nav.classList.toggle('open');
+    });
+    nav.querySelectorAll('a').forEach(a => {
         a.addEventListener('click', () => {
-            if (btn.classList.contains('active')) toggleMenu();
+            btn.classList.remove('active');
+            nav.classList.remove('open');
         });
     });
 }
@@ -1678,55 +1656,6 @@ function initFadeIn() {
 function initSearch() {
     const form = document.getElementById('car-search-form');
     if (!form) return;
-
-    // Load persisted filters
-    const savedFilters = JSON.parse(localStorage.getItem('lunnarSearchFilters') || 'null');
-    if (savedFilters) {
-        const setVal = (id, val) => {
-            const el = document.getElementById(id);
-            if (el && val !== undefined) el.value = val;
-        };
-
-        setVal('brand-select', savedFilters.brand);
-        if (savedFilters.brand) {
-            // Trigger brand change to populate models
-            const brandSelect = document.getElementById('brand-select');
-            if (brandSelect) {
-                brandSelect.dispatchEvent(new Event('change'));
-                // Wait for model populate
-                setTimeout(() => {
-                    setVal('model-select', savedFilters.model);
-                    const modelSelect = document.getElementById('model-select');
-                    if (modelSelect?._searchableSelect) modelSelect._searchableSelect.rebuild();
-                }, 100);
-            }
-        }
-
-        setVal('fuel-select', savedFilters.fuel);
-        setVal('transmission-select', savedFilters.transmission);
-        setVal('body-select', savedFilters.bodyStyle);
-        setVal('condition-select', savedFilters.condition);
-        setVal('color-select', savedFilters.color);
-        setVal('year-from', savedFilters.yearFrom);
-        setVal('year-to', savedFilters.yearTo);
-        setVal('price-from', savedFilters.priceFrom);
-        setVal('price-to', savedFilters.priceTo);
-        setVal('km-from', savedFilters.kmFrom);
-        setVal('km-to', savedFilters.kmTo);
-        setVal('hp-from', savedFilters.hpFrom);
-        setVal('hp-to', savedFilters.hpTo);
-        setVal('city-search', savedFilters.searchCity);
-        setVal('distance-select', savedFilters.distanceLimit);
-        setVal('sort-select', savedFilters.sort);
-
-        // Rebuild searchable selects
-        form.querySelectorAll('select').forEach(s => {
-            if (s._searchableSelect) s._searchableSelect.rebuild();
-        });
-        
-        // Initial filter run after short delay to ensure everything is ready
-        setTimeout(filterCars, 300);
-    }
 
     form.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -1866,8 +1795,17 @@ async function fetchAds() {
     const localAds = JSON.parse(localStorage.getItem('lunnarLocalAds') || '[]');
     const approvedLocalAds = localAds.filter(ad => ad.status === 'approved');
 
-    // Merge: API ads take priority
-    let combinedAds = [...apiAds, ...approvedLocalAds];
+    // Merge: API ads take priority, deduplicate by _id or id
+    const combinedAds = [...apiAds];
+    approvedLocalAds.forEach(local => {
+        const isDuplicate = combinedAds.some(api => 
+            (api._id && api._id === local.id) || 
+            (api.id && api.id === local.id)
+        );
+        if (!isDuplicate) {
+            combinedAds.push(local);
+        }
+    });
 
     allCars = combinedAds;
     filteredCars = [...allCars];
@@ -2375,17 +2313,6 @@ function toggleAdmin() {
     }
 }
 
-// ===== SECURITY HELPERS =====
-function escapeHTML(str) {
-    if (!str) return '';
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}
-
 // ===== TOAST NOTIFICATION SYSTEM =====
 function showToast(message, type = 'info', duration = 4000) {
     const container = document.getElementById('toast-container');
@@ -2820,84 +2747,74 @@ async function initAuth() {
         e.preventDefault();
         const email = document.getElementById('forgot-email').value.trim().toLowerCase();
         const submitBtn = forgotForm.querySelector('.auth-submit-btn');
+        const users = getUsers();
+        const user = users.find(u => u.email === email);
 
-        if (!email) { showToast('Kérjük, add meg az email címedet!', 'error'); return; }
+        if (!user) {
+            showToast('Nem található fiók ezzel az email címmel!', 'error');
+            return;
+        }
 
         // Loading állapot
         if (submitBtn) { submitBtn.disabled = true; submitBtn.querySelector('span').textContent = 'KÜLDÉS...'; }
 
-        try {
-            const res = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email })
-            });
-            const data = await res.json();
+        const code = generateCode();
+        pendingResets[email] = code;
 
-            if (res.ok) {
-                // Backend return code for EmailJS
-                const sent = await sendEmailCode(email, data.code, 'reset');
-                if (sent) {
-                    document.getElementById('forgot-step-1').style.display = 'none';
-                    document.getElementById('forgot-step-2').style.display = 'block';
-                    document.getElementById('forgot-code').value = '';
-                    document.getElementById('forgot-new-pw').value = '';
-                    resetForgotPasswordRequirements();
-                    showToast('Visszaállítási kódot elküldtük! 📧 Ellenőrizd a postafiókodat.', 'success', 6000);
-                }
-            } else {
-                showToast(data.message || 'Hiba a kérés során', 'error');
-            }
-        } catch (err) {
-            showToast('Szerver hiba: ' + err.message, 'error');
-        } finally {
-            if (submitBtn) { submitBtn.disabled = false; submitBtn.querySelector('span').textContent = 'KÓD KÜLDÉSE'; }
+        // Valódi email küldés
+        const sent = await sendEmailCode(email, code, 'reset');
+
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.querySelector('span').textContent = 'KÓD KÜLDÉSE'; }
+
+        if (!sent) {
+            delete pendingResets[email];
+            return; // Hiba toast már megjelent
         }
+
+        // Email elküldve – megjelenítjük a 2. lépést
+        document.getElementById('forgot-step-1').style.display = 'none';
+        document.getElementById('forgot-step-2').style.display = 'block';
+        document.getElementById('forgot-code').value = '';
+        document.getElementById('forgot-new-pw').value = '';
+        resetForgotPasswordRequirements();
+
+        showToast('Visszaállítási kódot elküldtük! 📧 Ellenőrizd a postafiókodat.', 'success', 6000);
     });
 
     // STEP 2: Verify code and set new password
     const forgotResetForm = document.getElementById('forgot-reset-form');
-    if (forgotResetForm) forgotResetForm.addEventListener('submit', async (e) => {
+    if (forgotResetForm) forgotResetForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const email = document.getElementById('forgot-email').value.trim().toLowerCase();
-        const code = document.getElementById('forgot-code').value.trim();
-        const newPassword = document.getElementById('forgot-new-pw').value;
-        const submitBtn = forgotResetForm.querySelector('.auth-submit-btn');
+        const codeInput = document.getElementById('forgot-code').value.trim();
+        const newPw = document.getElementById('forgot-new-pw').value;
 
-        if (newPassword.length < 6) { showToast('A jelszó legalább 6 karakter legyen!', 'error'); return; }
-        if (!/[A-Z]/.test(newPassword)) { showToast('A jelszónak nagybetűt kell tartalmaznia!', 'error'); return; }
-        if (!/[0-9]/.test(newPassword)) { showToast('A jelszónak számot kell tartalmaznia!', 'error'); return; }
+        if (!pendingResets[email]) { showToast('Hiba: nincs aktív visszaállítási kérelem.', 'error'); return; }
+        if (codeInput !== pendingResets[email]) { showToast('Helytelen kód! Próbáld újra.', 'error'); return; }
+        if (newPw.length < 6) { showToast('A jelszó legalább 6 karakter legyen!', 'error'); return; }
+        if (!/[A-Z]/.test(newPw)) { showToast('A jelszónak nagybetűt kell tartalmaznia!', 'error'); return; }
+        if (!/[0-9]/.test(newPw)) { showToast('A jelszónak számot kell tartalmaznia!', 'error'); return; }
 
-        if (submitBtn) { submitBtn.disabled = true; submitBtn.querySelector('span').textContent = 'FRISSÍTÉS...'; }
+        const users = getUsers();
+        const userIdx = users.findIndex(u => u.email === email);
+        if (userIdx === -1) { showToast('Felhasználó nem található!', 'error'); return; }
 
-        try {
-            const res = await fetch(`${API_BASE_URL}/auth/reset-password`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, code, newPassword })
-            });
-            const data = await res.json();
+        users[userIdx].passwordHash = simpleHash(newPw);
+        saveUsers(users);
+        delete pendingResets[email];
 
-            if (res.ok) {
-                forgotModal.classList.remove('active');
-                document.body.style.overflow = '';
-                showToast('Jelszavad sikeresen megváltozott! 🎉 Most már bejelentkezhetsz.', 'success', 6000);
+        forgotModal.classList.remove('active');
+        document.body.style.overflow = '';
+        showToast('Jelszavad sikeresen megváltozott! 🎉 Most már bejelentkezhetsz.', 'success', 6000);
 
-                authModal.classList.add('active');
-                document.body.style.overflow = 'hidden';
-                document.querySelector('[data-tab="login-tab"]').click();
-                setTimeout(() => {
-                    document.getElementById('login-email').value = email;
-                    document.getElementById('login-password').focus();
-                }, 100);
-            } else {
-                showToast(data.message || 'Hiba a visszaállítás során', 'error');
-            }
-        } catch (err) {
-            showToast('Szerver hiba: ' + err.message, 'error');
-        } finally {
-            if (submitBtn) { submitBtn.disabled = false; submitBtn.querySelector('span').textContent = 'JELSZÓ FRISSÍTÉSE'; }
-        }
+        // Open login modal and prefill email
+        authModal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        document.querySelector('[data-tab="login-tab"]').click();
+        setTimeout(() => {
+            document.getElementById('login-email').value = email;
+            document.getElementById('login-password').focus();
+        }, 100);
     });
 
     // ===== PASSWORD TOGGLES (all, including new modals) =====
@@ -2973,6 +2890,85 @@ function initCompareListeners() {
         });
     }
 
+    async function sendUserChatMessage() {
+        if (!token || !currentUser || !activeChatAdId || !activeChatReceiverId) return;
+
+        const input = document.getElementById('chat-input-text');
+        const text = input.value.trim();
+        if (!text && !lastUploadedImageData) return;
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/messages`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    receiverId: activeChatReceiverId,
+                    adId: activeChatAdId,
+                    content: text,
+                    imageUrl: lastUploadedImageData
+                })
+            });
+            if (res.ok) {
+                input.value = '';
+                lastUploadedImageData = null;
+                const imgBtn = document.querySelector('.chat-upload-btn');
+                if (imgBtn) imgBtn.textContent = '📷';
+                fetchChatMessages();
+            } else {
+                const err = await res.json();
+                showToast(err.message || 'Nem sikerült elküldeni az üzenetet.', 'error');
+            }
+        } catch (err) {
+            showToast('Hálózati hiba az üzenet küldésekor', 'error');
+        }
+    }
+
+    let lastUploadedImageData = null;
+    async function handleChatImageUpload(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        try {
+            showToast('Kép feldolgozása...', 'info');
+            const compressed = await compressImage(file, 800, 800, 0.7);
+            lastUploadedImageData = compressed;
+            const imgBtn = document.querySelector('.chat-upload-btn');
+            if (imgBtn) imgBtn.textContent = '✅';
+            showToast('Kép készen áll a küldésre!', 'success');
+        } catch (err) {
+            console.error(err);
+            showToast('Sikertelen képfeldolgozás', 'error');
+        }
+    }
+
+    async function markMessagesAsRead(adId, otherPartyId) {
+        if (!token) return;
+        try {
+            await fetch(`${API_BASE_URL}/messages/read/${adId}/${otherPartyId}`, {
+                method: 'PATCH',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+        } catch (err) { console.error(err); }
+    }
+
+    async function deleteConversation(adId, otherPartyId) {
+        if (!confirm('Biztosan törölni szeretnéd ezt a beszélgetést?')) return;
+        try {
+            const res = await fetch(`${API_BASE_URL}/messages/conversation/${adId}/${otherPartyId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                showToast('Beszélgetés törölve', 'success');
+                fetchUserInbox();
+            }
+        } catch (err) {
+            showToast('Hiba a törlés során', 'error');
+        }
+    }
 
     const compareClose = document.getElementById('compare-close');
     if (compareClose) {
@@ -3010,15 +3006,21 @@ async function renderProfile() {
     if (emailEl) emailEl.textContent = currentUser.email;
     if (avatarEl) avatarEl.textContent = currentUser.username.charAt(0).toUpperCase();
 
-    // 2. Stats Calculation
+    // 2. Stats Calculation - Using robust deduplication
     const localAds = JSON.parse(localStorage.getItem('lunnarLocalAds') || '[]');
-    const myAds = localAds.filter(ad => ad.ownerEmail === currentUser.email || ad.ownerId === currentUser.id);
+    const userLocalAds = localAds.filter(ad => ad.ownerEmail === currentUser.email || ad.ownerId === currentUser.id);
 
-    // Filter server ads for owner too
-    const myServerAds = allCars.filter(ad => ad.ownerEmail === currentUser.email || ad.ownerId === currentUser.id || ad.email === currentUser.email);
+    // Filter server ads for owner
+    const myServerAds = allCars.filter(ad => ad.ownerEmail === currentUser.email || ad.ownerId === currentUser.id);
 
-    // Combine unique ads for the counter
-    const uniqueMyAds = [...new Map([...myServerAds, ...myAds].map(item => [item._id || item.id, item])).values()];
+    // Robust deduplication matching fetchMyAds logic
+    const uniqueMyAds = [...myServerAds];
+    userLocalAds.forEach(local => {
+        const isDuplicate = uniqueMyAds.some(s => (s._id && s._id === local.id) || (s.id && s.id === local.id));
+        if (!isDuplicate) {
+            uniqueMyAds.push(local);
+        }
+    });
 
     const favsIds = JSON.parse(localStorage.getItem('lunnarFavorites') || '[]');
     const favsActive = allCars.filter(c => {
@@ -3221,10 +3223,10 @@ function renderCarCard(car, isProfileView = false) {
     );
 
     return `
-        <div class="car-card glass-premium fade-in ${car.isPremium ? 'premium-ad' : ''}" data-id="${car._id || car.id}" style="${car.isPremium ? 'border: 2px solid #3b82f6; position: relative;' : ''}">
-            ${car.isPremium ? '<div style="position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:#fbbf24; color:#000; padding:4px 12px; border-radius:12px; font-weight:bold; font-size:0.75rem; z-index:10; box-shadow:0 4px 10px rgba(251,191,36,0.3);">KIEMELT</div>' : ''}
+        <div class="car-card glass-premium fade-in ${car.isPremium ? 'premium-ad' : ''}" data-id="${car._id || car.id}">
+            ${car.isPremium ? '<div class="featured-badge">KIEMELT</div>' : ''}
             <div class="car-image" onclick="window.location.hash='#ad/${car._id || car.id}'">
-                <img src="${firstImg}" alt="${escapeHTML(car.brand)} ${escapeHTML(car.model)}" loading="lazy">
+                <img src="${firstImg}" alt="${car.brand} ${car.model}" loading="lazy">
                 <button class="car-fav ${isFavorite ? 'active' : ''}" data-fav-id="${car._id || car.id}" title="Kedvenc">
                     ${isFavorite ? '❤️' : '🤍'}
                 </button>
@@ -3232,19 +3234,19 @@ function renderCarCard(car, isProfileView = false) {
             </div>
             <div class="car-info">
                 <div class="car-header">
-                    <h3 class="car-title" onclick="window.location.hash='#ad/${car._id || car.id}'">${escapeHTML(car.brand)} ${escapeHTML(car.model)}</h3>
+                    <h3 class="car-title" onclick="window.location.hash='#ad/${car._id || car.id}'">${car.brand} ${car.model}</h3>
                     <div class="car-price">${price}</div>
                 </div>
                 <div class="car-specs">
                     <span title="Évjárat">📅 ${car.year}</span>
                     <span title="Kilométer">🛣️ ${km}</span>
-                    <span title="Üzemanyag">⛽ ${escapeHTML(car.fuel)}</span>
-                    <span title="Váltó">⚙️ ${escapeHTML(car.transmission || 'N/A')}</span>
+                    <span title="Üzemanyag">⛽ ${car.fuel}</span>
+                    <span title="Váltó">⚙️ ${car.transmission || 'N/A'}</span>
                     <span title="Teljesítmény">⚡ ${car.hp || '?'} LE</span>
                 </div>
                 
                 <div class="car-footer-meta">
-                    <span>📍 ${escapeHTML(car.city || 'Nincs megadva')}</span>
+                    <span>📍 ${car.city || 'Nincs megadva'}</span>
                 </div>
 
                 ${isProfileView ? `
@@ -3259,7 +3261,7 @@ function renderCarCard(car, isProfileView = false) {
                         <button class="admin-btn reject" onclick="event.stopPropagation(); moderateAd('${car._id || car.id}', 'rejected')" style="flex:1; padding: 0.5rem; font-size: 0.75rem;">Elutasít</button>
                     ` : `
                         <button class="admin-btn edit" onclick="event.stopPropagation(); editAd('${car._id || car.id}')" style="flex:1; padding: 0.5rem; font-size: 0.75rem;">Szerkesztés</button>
-                        ${!car.isPremium ? `<button class="admin-btn" onclick="event.stopPropagation(); makeAdPremium('${car._id || car.id}')" style="flex:1; padding: 0.5rem; background:#fbbf24; color:#000; font-size: 0.75rem; border:none; font-weight:bold;">🌟 Kiemelés (5000Ft)</button>` : `<div style="flex:1; padding: 0.5rem; background:#fbbf24; color:#000; font-size: 0.75rem; text-align:center; border-radius:4px; font-weight:bold;">🌟 Kiemelve</div>`}
+                        ${!car.isPremium ? `<button class="admin-btn" onclick="event.stopPropagation(); makeAdPremium('${car._id || car.id}')" style="flex:1; padding: 0.5rem; background:#3b82f6; color:#fff; font-size: 0.75rem; border:none; font-weight:bold;">🌟 Kiemelés (5000Ft)</button>` : `<div style="flex:1; padding: 0.5rem; background:#3b82f6; color:#fff; font-size: 0.75rem; text-align:center; border-radius:4px; font-weight:bold;">🌟 Kiemelve</div>`}
                     `}
                     <button class="admin-btn delete" onclick="event.stopPropagation(); deleteAd('${car._id || car.id}')" style="flex:1; padding: 0.5rem; background:#dc2626; font-size: 0.75rem; border:none;">Törlés</button>
                 </div>
@@ -4154,21 +4156,19 @@ function renderUserInbox(conversations) {
     }
 
     container.innerHTML = conversations.map(c => {
-        const escapedBrand = escapeHTML(c.ad.brand || 'Ismeretlen');
-        const escapedModel = escapeHTML(c.ad.model || 'Autó');
-        const adTitle = `${escapedBrand} ${escapedModel}`;
+        const adTitle = `${c.ad.brand || 'Ismeretlen'} ${c.ad.model || 'Autó'}`;
         const adImg = c.ad.images && c.ad.images[0] ? c.ad.images[0] : (c.ad.img || 'https://via.placeholder.com/100x70?text=Auto');
         return `
             <div class="inbox-item-wrapper">
                 <button class="inbox-delete-btn" onclick="event.stopPropagation(); deleteConversation('${c.ad._id || c.ad}', '${String(c.otherPartyId)}')" title="Beszélgetés törlése">×</button>
-                <div class="inbox-item ${c.unread ? 'unread' : ''}" onclick="openUserChat('${c.ad._id || c.ad}', '${String(c.otherPartyId)}', '${escapeHTML(c.otherPartyName).replace(/'/g, "\\'")}', '${adTitle.replace(/'/g, "\\'")}')">
+                <div class="inbox-item ${c.unread ? 'unread' : ''}" onclick="openUserChat('${c.ad._id || c.ad}', '${String(c.otherPartyId)}', '${c.otherPartyName.replace(/'/g, "\\'")}', '${adTitle.replace(/'/g, "\\'")}')">
                     <img src="${adImg}" class="inbox-ad-img" alt="">
                     <div class="inbox-info">
                         <div class="inbox-top">
-                            <span class="inbox-user">${escapeHTML(c.otherPartyName)}</span>
+                            <span class="inbox-user">${c.otherPartyName}</span>
                             <span class="inbox-date">${c.date.toLocaleString('hu-HU', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
-                        <div class="inbox-preview">${escapeHTML(c.lastMessage)}</div>
+                        <div class="inbox-preview">${c.lastMessage}</div>
                         <div class="inbox-ad-title">${adTitle}</div>
                     </div>
                 </div>
@@ -4199,7 +4199,7 @@ let chatPollingInterval = null;
 let inboxPollingInterval = null;
 let lastRenderedChatAdId = null;
 let lastRenderedPartnerId = null;
-let uploadedImagesData = [];
+let lastUploadedImageData = null;
 
 function openUserChat(adId, receiverId, sellerName, paramAdTitle) {
     if (!token || !currentUser) {
@@ -4240,7 +4240,7 @@ function closeUserChat() {
 async function fetchChatMessages() {
     if (!activeChatAdId || !token) return;
     try {
-        const res = await fetch(`${API_BASE_URL}/messages/${activeChatAdId}?otherPartyId=${activeChatReceiverId}`, {
+        const res = await fetch(`${API_BASE_URL}/messages/${activeChatAdId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!res.ok) return;
@@ -4282,20 +4282,8 @@ function renderUserChatMessages(messages) {
                 el.style.color = isMe ? '#000' : 'var(--text-color)';
                 el.dataset.msgId = msgId;
                 let contentHtml = '';
-                
-                // Render images (array)
-                if (msg.images && msg.images.length > 0) {
-                    contentHtml += `<div class="chat-message-images" style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.5rem;">`;
-                    msg.images.forEach(img => {
-                        contentHtml += `<img src="${img}" class="chat-image-preview" style="width:120px; height:120px; object-fit:cover;" onclick="window.open('${img}', '_blank')">`;
-                    });
-                    contentHtml += `</div>`;
-                } else if (msg.imageUrl) {
-                    // Fallback for old single image messages
-                    contentHtml += `<img src="${msg.imageUrl}" class="chat-image-preview" onclick="window.open('${msg.imageUrl}', '_blank')"><br>`;
-                }
-                
-                if (msg.content) contentHtml += `<span>${escapeHTML(msg.content)}</span>`;
+                if (msg.imageUrl) contentHtml += `<img src="${msg.imageUrl}" class="chat-image-preview" onclick="window.open('${msg.imageUrl}', '_blank')"><br>`;
+                if (msg.content) contentHtml += `<span>${msg.content}</span>`;
                 el.innerHTML = contentHtml;
                 container.appendChild(el);
                 addedNew = true;
@@ -4309,22 +4297,18 @@ async function sendUserChatMessage() {
     if (!token || !currentUser || !activeChatAdId || !activeChatReceiverId) return;
     const input = document.getElementById('chat-input-text');
     const text = input.value.trim();
-    if (!text && uploadedImagesData.length === 0) return;
+    if (!text && !lastUploadedImageData) return;
     try {
         const res = await fetch(`${API_BASE_URL}/messages`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ 
-                receiverId: activeChatReceiverId, 
-                adId: activeChatAdId, 
-                content: text, 
-                images: uploadedImagesData 
-            })
+            body: JSON.stringify({ receiverId: activeChatReceiverId, adId: activeChatAdId, content: text, imageUrl: lastUploadedImageData })
         });
         if (res.ok) {
             input.value = '';
-            uploadedImagesData = [];
-            renderChatPreviews();
+            lastUploadedImageData = null;
+            const imgBtn = document.querySelector('.chat-upload-btn');
+            if (imgBtn) imgBtn.textContent = '📷';
             fetchChatMessages();
         } else {
             const err = await res.json();
@@ -4334,56 +4318,17 @@ async function sendUserChatMessage() {
 }
 
 async function handleChatImageUpload(e) {
-    const files = Array.from(e.target.files);
-    if (files.length === 0) return;
-    
-    if (uploadedImagesData.length + files.length > 5) {
-        showToast('Maximum 5 képet küldhetsz egyszerre.', 'warning');
-        return;
-    }
-
-    showToast(`${files.length} kép feldolgozása...`, 'info');
-    
-    for (const file of files) {
-        try {
-            const compressed = await compressImage(file, 1000, 1000, 0.7);
-            uploadedImagesData.push(compressed);
-        } catch (err) {
-            console.error('Hiba a kép tömörítésekor:', err);
-            showToast('Egyes képek feldolgozása sikertelen volt.', 'error');
-        }
-    }
-    
-    renderChatPreviews();
-    e.target.value = ''; // Reset input
-    showToast('Képek készen állnak!', 'success');
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+        showToast('Kép feldolgozása...', 'info');
+        const compressed = await compressImage(file, 800, 800, 0.7);
+        lastUploadedImageData = compressed;
+        const imgBtn = document.querySelector('.chat-upload-btn');
+        if (imgBtn) imgBtn.textContent = '✅';
+        showToast('Kép készen áll a küldésre!', 'success');
+    } catch (err) { showToast('Sikertelen képfeldolgozás', 'error'); }
 }
-
-function renderChatPreviews() {
-    const container = document.getElementById('chat-image-previews');
-    if (!container) return;
-    
-    if (uploadedImagesData.length === 0) {
-        container.innerHTML = '';
-        container.style.display = 'none';
-        return;
-    }
-    
-    container.style.display = 'flex';
-    container.innerHTML = uploadedImagesData.map((img, index) => `
-        <div style="position:relative; width:60px; height:60px;">
-            <img src="${img}" style="width:100%; height:100%; object-fit:cover; border-radius:4px; border:1px solid var(--border-color);">
-            <button onclick="removeChatImage(${index})" style="position:absolute; top:-5px; right:-5px; background:#ef4444; color:white; border:none; border-radius:50%; width:18px; height:18px; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center;">×</button>
-        </div>
-    `).join('');
-}
-
-function removeChatImage(index) {
-    uploadedImagesData.splice(index, 1);
-    renderChatPreviews();
-}
-
-window.removeChatImage = removeChatImage;
 
 async function markMessagesAsRead(adId, otherPartyId) {
     if (!token) return;

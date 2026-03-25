@@ -4,6 +4,7 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
+const https = require('https');
 
 const app = express();
 const jwtSecret = process.env.JWT_SECRET || 'lunnar_secret_key_2026';
@@ -441,8 +442,9 @@ app.post('/api/messages', authenticateToken, async (req, res) => {
             images: images || []
         });
         await msg.save();
+        res.status(201).json(msg);
 
-        // --- Email Értesítés Küldése (EmailJS REST API) ---
+        // --- Email Értesítés Küldése (Elkülönítve, nem blokkolja a választ) ---
         (async () => {
             try {
                 const receiver = await User.findById(receiverId);
@@ -465,15 +467,15 @@ app.post('/api/messages', authenticateToken, async (req, res) => {
                         }
                     });
 
-                    const https = require('https');
                     const options = {
                         hostname: 'api.emailjs.com',
                         path: '/api/v1.0/email/send',
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'Content-Length': emailData.length
-                        }
+                            'Content-Length': Buffer.byteLength(emailData)
+                        },
+                        timeout: 10000 // 10 mp timeout
                     };
 
                     const reqMail = https.request(options, (resMail) => {
@@ -489,19 +491,17 @@ app.post('/api/messages', authenticateToken, async (req, res) => {
                     });
 
                     reqMail.on('error', (e) => {
-                        console.error(`[EMAIL] Hiba az értesítés küldésekor: ${e.message}`);
+                        console.error(`[EMAIL] Hálózati hiba: ${e.message}`);
                     });
 
                     reqMail.write(emailData);
                     reqMail.end();
                 }
             } catch (emailErr) {
-                console.error('[EMAIL] Belső hiba az értesítés előkészítésekor:', emailErr.message);
+                console.error('[EMAIL] Háttér hiba:', emailErr.message);
             }
         })();
         // ------------------------------------------------
-
-        res.status(201).json(msg);
     } catch (err) {
         console.error('[MSG] Hiba az üzenet mentésekor:', err.message);
         res.status(500).json({ message: err.message });

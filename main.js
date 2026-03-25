@@ -4196,7 +4196,7 @@ async function fetchUserInbox() {
                 const otherObject = sId === String(currentUser.id) ? msg.receiverId : msg.senderId;
                 const otherPartyName = otherObject.username || 'Partner';
 
-                const adIdStr = String(msg.adId?._id || msg.adId);
+                const adIdStr = msg.adId ? String(msg.adId?._id || msg.adId) : "unknown";
                 const key = `${adIdStr}_${otherPartyId}`;
                 if (!conversations[key]) {
                     conversations[key] = {
@@ -4230,6 +4230,7 @@ async function fetchUserInbox() {
         }
     } catch (err) {
         console.error('Hiba az üzenetek lekérésekor', err);
+        if (container) container.innerHTML = '<div class="placeholder">HIBA AZ ÜZENETEK BETÖLTÉSEKOR</div>';
     }
 }
 
@@ -4243,8 +4244,9 @@ function renderUserInbox(conversations) {
     }
 
     container.innerHTML = conversations.map(c => {
-        const adTitle = escapeHTML(`${c.ad.brand || 'Ismeretlen'} ${c.ad.model || 'Autó'}`);
-        const adImg = c.ad.images && c.ad.images[0] ? c.ad.images[0] : (c.ad.img || 'https://via.placeholder.com/100x70?text=Auto');
+        const ad = c.ad || { brand: 'Ismeretlen', model: 'autó' };
+        const adTitle = escapeHTML(`${ad.brand || 'Ismeretlen'} ${ad.model || 'Autó'}`);
+        const adImg = ad.images && ad.images[0] ? ad.images[0] : (ad.img || 'https://via.placeholder.com/100x70?text=Auto');
         return `
             <div class="inbox-item-wrapper">
                 <button class="inbox-delete-btn" onclick="event.stopPropagation(); deleteConversation('${c.ad._id || c.ad}', '${String(c.otherPartyId)}')" title="Beszélgetés törlése">×</button>

@@ -25,11 +25,6 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', time: new Date() });
 });
 
-// Health check endpoint for cron jobs (heartbeat)
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok' });
-});
-
 // MongoDB Connection
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/lunnar';
 mongoose.connect(MONGODB_URI)
@@ -413,11 +408,11 @@ app.get('/api/messages/:adId/:otherPartyId', authenticateToken, async (req, res)
         const { adId, otherPartyId } = req.params;
         const myId = req.user.userId;
         
-        console.log(`[API] Fetching messages: Ad=${adId}, Partner=${otherPartyId}, Me=${myId}`);
+        console.log(`[API] Fetching chat for Ad=${adId}, User=${myId}, with Partner=${otherPartyId}`);
 
         if (!mongoose.Types.ObjectId.isValid(adId) || !mongoose.Types.ObjectId.isValid(otherPartyId)) {
-             console.warn(`[API] Invalid IDs in fetch: Ad=${adId}, Partner=${otherPartyId}`);
-             return res.json([]); 
+            console.error(`[API] Fetch failed: Invalid IDs. Ad=${adId}, Partner=${otherPartyId}`);
+            return res.json([]);
         }
 
         const messages = await Message.find({
@@ -428,9 +423,10 @@ app.get('/api/messages/:adId/:otherPartyId', authenticateToken, async (req, res)
             ]
         }).populate('senderId', 'username').populate('receiverId', 'username').sort({ createdAt: 1 });
         
-        console.log(`[API] Found ${messages.length} messages.`);
+        console.log(`[API] Found ${messages.length} messages for chat.`);
         res.json(messages);
     } catch (err) {
+        console.error(`[API] Chat fetch error:`, err);
         res.status(500).json({ message: err.message });
     }
 });

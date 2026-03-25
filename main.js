@@ -12,6 +12,17 @@ if (isLightMode) {
     body.classList.add('light-mode');
 }
 
+// Utility for preventing XSS
+function escapeHTML(str) {
+    if (!str) return "";
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 themeToggle.addEventListener('click', () => {
     body.classList.toggle('light-mode');
     isLightMode = body.classList.contains('light-mode');
@@ -427,9 +438,9 @@ const CAR_IMAGES = [
 ];
 
 // ===== BACKEND CONFIG =====
-const API_BASE_URL = window.location.protocol === 'file:' 
-    ? 'http://localhost:5000/api' 
-    : '/api'; 
+const API_BASE_URL = (window.location.hostname === 'lunnar.onrender.com') 
+    ? '/api' 
+    : 'https://lunnar.onrender.com/api'; 
 
 // ===== GENERATE CARS =====
 function generateCars(count = 12) {
@@ -1337,10 +1348,10 @@ function renderAdDetail(id) {
                             <button class="cta-button primary" style="width:100%;">📞 ELADÓ HÍVÁSA</button>
                         `}
                         <div id="seller-rating-${car._id || car.id}" style="text-align:center; font-size:0.9rem; margin-bottom:0.5rem; color:#fbbf24; font-weight:bold;"></div>
-                        ${(token && currentUser && String(car.owner || car.ownerId) === String(currentUser.id)) ? `
+                        ${token && currentUser && (String(car.owner?._id || car.owner || car.ownerId) === String(currentUser.id || currentUser._id)) ? `
                             <button class="cta-button secondary" onclick="goToProfileMessages()" style="width:100%;">💬 ÜZENETEK MEGNYITÁSA</button>
                         ` : `
-                            <button class="cta-button secondary" onclick="openUserChat('${String(car._id || car.id)}', '${String(car.owner || car.ownerId || '')}', '${String(car.seller || 'Eladó').replace(/'/g, "\\'")}', '${String(car.brand + ' ' + car.model).replace(/'/g, "\\'")}')" style="width:100%;">💬 CHAT AZ ELADÓVAL</button>
+                            <button class="cta-button secondary" onclick="openUserChat('${String(car._id || car.id)}', '${String(car.owner?._id || car.owner || car.ownerId || '')}', '${String(car.seller || 'Eladó').replace(/'/g, "\\'")}', '${String(car.brand + ' ' + car.model).replace(/'/g, "\\'")}')" style="width:100%;">💬 CHAT AZ ELADÓVAL</button>
                         `}
                         ${token && currentUser ? `
                             <button class="cta-mini" onclick="openRatingModal('${String(car.owner || car.ownerId || '')}', '${String(car.seller || 'Eladó').replace(/'/g, "\\'")}')" style="width:100%; padding:0.8rem; border:1px solid var(--border-color); background:transparent; color:var(--text-color); font-weight:bold; letter-spacing:1px;">⭐ ELADÓ ÉRTÉKELÉSE</button>
@@ -4212,7 +4223,7 @@ async function fetchUserInbox() {
                         otherPartyName: otherPartyName,
                         lastMessage: msg.content,
                         date: new Date(msg.createdAt),
-                        unread: !msg.isRead && rId === String(currentUser.id)
+                        unread: !msg.isRead && rId === String(currentUser?.id || currentUser?._id)
                     };
                 }
             });
@@ -4234,10 +4245,16 @@ async function fetchUserInbox() {
             if (mainBadge) mainBadge.textContent = unreadText;
             if (navBadge) navBadge.textContent = unreadText;
             renderUserInbox(convList);
+        } else {
+            console.warn('[Inbox] Fetch failed:', res.status);
+            if (container) container.innerHTML = `<div class="placeholder">HIBA (${res.status}): SZEVER HIBA</div>`;
+            if (res.status === 401 || res.status === 403) {
+                showToast('Munkamenet lejárt, kérlek jelentkezz be újra!', 'error');
+            }
         }
     } catch (err) {
         console.error('Hiba az üzenetek lekérésekor', err);
-        if (container) container.innerHTML = '<div class="placeholder">HIBA AZ ÜZENETEK BETÖLTÉSEKOR</div>';
+        if (container) container.innerHTML = `<div class="placeholder">CSATLAKOZÁSI HIBA: ${err.message}</div>`;
     }
 }
 
@@ -4252,12 +4269,15 @@ function renderUserInbox(conversations) {
 
     container.innerHTML = conversations.map(c => {
         const ad = c.ad || { brand: 'Ismeretlen', model: 'autó' };
+        const adIdStr = String(ad?._id || ad?.id || ad);
+        const partnerIdStr = String(c.otherPartyId?._id || c.otherPartyId?.id || c.otherPartyId);
+        
         const adTitle = escapeHTML(`${ad.brand || 'Ismeretlen'} ${ad.model || 'Autó'}`);
         const adImg = ad.images && ad.images[0] ? ad.images[0] : (ad.img || 'https://via.placeholder.com/100x70?text=Auto');
         return `
             <div class="inbox-item-wrapper">
-                <button class="inbox-delete-btn" onclick="event.stopPropagation(); deleteConversation('${c.ad._id || c.ad}', '${String(c.otherPartyId)}')" title="Beszélgetés törlése">×</button>
-                <div class="inbox-item ${c.unread ? 'unread' : ''}" onclick="openUserChat('${c.ad._id || c.ad}', '${String(c.otherPartyId)}', '${escapeHTML(c.otherPartyName).replace(/'/g, "\\'")}', '${adTitle.replace(/'/g, "\\'")}')">
+                <button class="inbox-delete-btn" onclick="event.stopPropagation(); deleteConversation('${adIdStr}', '${partnerIdStr}')" title="Beszélgetés törlése">×</button>
+                <div class="inbox-item ${c.unread ? 'unread' : ''}" onclick="openUserChat('${adIdStr}', '${partnerIdStr}', '${escapeHTML(c.otherPartyName).replace(/'/g, "\\'")}', '${adTitle.replace(/'/g, "\\'")}')">
                     <img src="${adImg}" class="inbox-ad-img" alt="">
                     <div class="inbox-info">
                         <div class="inbox-top">
@@ -4298,6 +4318,17 @@ let lastRenderedPartnerId = null;
 let lastUploadedImageData = null;
 
 function openUserChat(adId, receiverId, sellerName, paramAdTitle) {
+    // Force IDs to strings if they are objects
+    if (adId && typeof adId === 'object') adId = adId._id || adId.id || String(adId);
+    if (receiverId && typeof receiverId === 'object') receiverId = receiverId._id || receiverId.id || String(receiverId);
+    
+    // Ensure we don't have [object Object]
+    if (String(adId).includes('[object') || String(receiverId).includes('[object')) {
+        console.error('[Chat] FATAL: Invalid IDs passed to chat!', { adId, receiverId });
+        showToast('Hiba a chat indításakor (Érvénytelen azonosító)', 'error');
+        return;
+    }
+
     if (!token || !currentUser) {
         showToast('A chat használatához be kell jelentkezned!', 'error');
         return;
@@ -4343,15 +4374,23 @@ function closeUserChat() {
 }
 
 async function fetchChatMessages() {
-    if (!activeChatAdId || !token) return;
+    if (!activeChatAdId || !activeChatReceiverId || !token) return;
+    
+    console.log(`[Chat] Fetching messages: Ad=${activeChatAdId}, Partner=${activeChatReceiverId}`);
     try {
         const res = await fetch(`${API_BASE_URL}/messages/${activeChatAdId}/${activeChatReceiverId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        if (!res.ok) return;
+        if (!res.ok) {
+            console.warn('[Chat] Fetch failed:', res.status);
+            const messagesContainer = document.getElementById('chat-message-list');
+            if (messagesContainer) messagesContainer.innerHTML = `<div class="placeholder">HIBA (${res.status}): Nem sikerült betölteni az üzeneteket.</div>`;
+            return;
+        }
         const messages = await res.json();
-        const hasNewIncoming = messages.some(m => !m.isRead && String(m.receiverId._id || m.receiverId) === String(currentUser.id));
-        if (hasNewIncoming) markMessagesAsRead(activeChatAdId, activeChatReceiverId);
+        const myIdStr = String(currentUser?.id || currentUser?._id || "");
+        const hasNewIncoming = messages.some(m => !m.isRead && String(m.receiverId._id || m.receiverId) === myIdStr);
+        if (hasNewIncoming && myIdStr) markMessagesAsRead(activeChatAdId, activeChatReceiverId);
         renderUserChatMessages(messages);
     } catch (err) { console.warn('Hiba az üzenetek lekérésekor'); }
 }

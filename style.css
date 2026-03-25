@@ -7083,8 +7083,7 @@ body.light-mode .history-item:hover {
 /* ===== MOBILE OVERRIDES FOR FLOATING WIDGETS ===== */
 @media (max-width: 768px) {
     .ai-chat-widget {
-        bottom: 20px !important;
-        left: 20px !important;
+        display: none !important;
     }
 
     .messages-trigger-widget {

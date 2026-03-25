@@ -450,36 +450,53 @@ app.post('/api/messages', authenticateToken, async (req, res) => {
                 const ad = await Ad.findById(adId);
 
                 if (receiver && receiver.email && ad) {
-                    const emailData = {
-                        service_id: process.env.EMAILJS_MSG_SERVICE_ID || 'service_uvauvze',
-                        template_id: process.env.EMAILJS_MSG_TEMPLATE_ID || 'template_new_message',
-                        user_id: process.env.EMAILJS_MSG_PUBLIC_KEY,
-                        accessToken: process.env.EMAILJS_MSG_PRIVATE_KEY, // Required for server-side
+                    const emailData = JSON.stringify({
+                        service_id: process.env.EMAILJS_MSG_SERVICE_ID || 'service_piq91zy',
+                        template_id: process.env.EMAILJS_MSG_TEMPLATE_ID || 'template_p2thcur',
+                        user_id: process.env.EMAILJS_MSG_PUBLIC_KEY || 'KbS9mUQba27kGlvuD',
+                        accessToken: process.env.EMAILJS_MSG_PRIVATE_KEY || 'aXMwuzwj76A4U-xF-uwq0',
                         template_params: {
                             to_email: receiver.email,
                             sender_name: sender ? sender.username : 'Érdeklődő',
                             ad_title: `${ad.brand} ${ad.model}`,
-                            title: `${ad.brand} ${ad.model}`, // For compatibility with Subject: {{title}}
+                            title: `${ad.brand} ${ad.model}`,
                             message: content || 'Képet küldött.',
                             reply_to: sender ? sender.email : ''
                         }
-                    };
-
-                    const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(emailData)
                     });
 
-                    if (response.ok) {
-                        console.log(`[EMAIL] Értesítés elküldve: ${receiver.email}`);
-                    } else {
-                        const errorText = await response.text();
-                        console.warn(`[EMAIL] EmailJS hiba: ${errorText}`);
-                    }
+                    const https = require('https');
+                    const options = {
+                        hostname: 'api.emailjs.com',
+                        path: '/api/v1.0/email/send',
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Content-Length': emailData.length
+                        }
+                    };
+
+                    const reqMail = https.request(options, (resMail) => {
+                        let resData = '';
+                        resMail.on('data', (chunk) => { resData += chunk; });
+                        resMail.on('end', () => {
+                            if (resMail.statusCode === 200) {
+                                console.log(`[EMAIL] Értesítés elküldve: ${receiver.email}`);
+                            } else {
+                                console.warn(`[EMAIL] EmailJS hiba (${resMail.statusCode}): ${resData}`);
+                            }
+                        });
+                    });
+
+                    reqMail.on('error', (e) => {
+                        console.error(`[EMAIL] Hiba az értesítés küldésekor: ${e.message}`);
+                    });
+
+                    reqMail.write(emailData);
+                    reqMail.end();
                 }
             } catch (emailErr) {
-                console.error('[EMAIL] Hiba az értesítés küldésekor:', emailErr.message);
+                console.error('[EMAIL] Belső hiba az értesítés előkészítésekor:', emailErr.message);
             }
         })();
         // ------------------------------------------------

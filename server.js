@@ -406,13 +406,25 @@ app.get('/api/user/stats', authenticateToken, async (req, res) => {
 
 app.get('/api/messages/:adId/:otherPartyId', authenticateToken, async (req, res) => {
     try {
+        const { adId, otherPartyId } = req.params;
+        const myId = req.user.userId;
+        
+        console.log(`[API] Fetching messages: Ad=${adId}, Partner=${otherPartyId}, Me=${myId}`);
+
+        if (!mongoose.Types.ObjectId.isValid(adId) || !mongoose.Types.ObjectId.isValid(otherPartyId)) {
+             console.warn(`[API] Invalid IDs in fetch: Ad=${adId}, Partner=${otherPartyId}`);
+             return res.json([]); 
+        }
+
         const messages = await Message.find({
-            adId: req.params.adId,
+            adId: adId,
             $or: [
-                { senderId: req.user.userId, receiverId: req.params.otherPartyId },
-                { senderId: req.params.otherPartyId, receiverId: req.user.userId }
+                { senderId: myId, receiverId: otherPartyId },
+                { senderId: otherPartyId, receiverId: myId }
             ]
         }).populate('senderId', 'username').populate('receiverId', 'username').sort({ createdAt: 1 });
+        
+        console.log(`[API] Found ${messages.length} messages.`);
         res.json(messages);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -433,9 +445,18 @@ app.get('/api/messages', authenticateToken, async (req, res) => {
 app.post('/api/messages', authenticateToken, async (req, res) => {
     try {
         const { adId, receiverId, content, imageUrl, images } = req.body;
+        const myId = req.user.userId;
+
+        console.log(`[API] POST message: Ad=${adId}, Receiver=${receiverId}, Sender=${myId}, Content="${content?.substring(0, 20)}..."`);
+
+        if (!mongoose.Types.ObjectId.isValid(adId) || !mongoose.Types.ObjectId.isValid(receiverId)) {
+            console.error(`[API] Message POST failed: Invalid IDs. Ad=${adId}, Receiver=${receiverId}`);
+            return res.status(400).json({ message: 'Invalid advertisement or receiver ID.' });
+        }
+
         const msg = new Message({
             adId,
-            senderId: req.user.userId,
+            senderId: myId,
             receiverId,
             content,
             imageUrl,

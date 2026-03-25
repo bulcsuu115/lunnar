@@ -4180,6 +4180,10 @@ async function fetchUserInbox() {
     const badge = document.getElementById('stat-messages-count');
     if (!container) return;
 
+    // Helper to get ID consistently
+    const getUID = (u) => u ? (u.id || u._id || String(u)) : null;
+    const myId = getUID(currentUser);
+
     try {
         const res = await fetch(`${API_BASE_URL}/messages`, {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -4190,11 +4194,14 @@ async function fetchUserInbox() {
             // Group messages by adId and the OTHER party (sender or receiver)
             const conversations = {};
             messages.forEach(msg => {
-                const sId = String(msg.senderId._id || msg.senderId);
-                const rId = String(msg.receiverId._id || msg.receiverId);
-                const otherPartyId = sId === String(currentUser.id) ? rId : sId;
-                const otherObject = sId === String(currentUser.id) ? msg.receiverId : msg.senderId;
-                const otherPartyName = otherObject.username || 'Partner';
+                const sId = getUID(msg.senderId);
+                const rId = getUID(msg.receiverId);
+                if (!sId || !rId) return; // Skip malformed
+
+                const isMe = sId === myId;
+                const otherPartyId = isMe ? rId : sId;
+                const otherObject = isMe ? msg.receiverId : msg.senderId;
+                const otherPartyName = (otherObject && otherObject.username) ? otherObject.username : 'Partner';
 
                 const adIdStr = msg.adId ? String(msg.adId?._id || msg.adId) : "unknown";
                 const key = `${adIdStr}_${otherPartyId}`;
@@ -4301,11 +4308,15 @@ function openUserChat(adId, receiverId, sellerName, paramAdTitle) {
     activeChatAdId = adId;
     activeChatReceiverId = receiverId;
     
-    document.getElementById('chat-ad-title').textContent = paramAdTitle;
-    document.getElementById('chat-partner-name').textContent = sellerName;
+    console.log(`[Chat] Opening chat: Ad=${adId}, Partner=${receiverId}, Me=${currentUser?.id || currentUser?._id}`);
+
+    document.getElementById('chat-ad-title').textContent = paramAdTitle || 'Chat';
+    document.getElementById('chat-partner-name').textContent = sellerName || 'Partner';
     
     const messagesContainer = document.getElementById('chat-message-list');
-    messagesContainer.innerHTML = '<div class="message-loading" style="text-align:center; opacity:0.6; padding:1rem;">Üzenetek betöltése...</div>';
+    if (messagesContainer) {
+        messagesContainer.innerHTML = '<div class="message-loading">Üzenetek betöltése...</div>';
+    }
     
     modal.classList.add('active');
     
@@ -4343,6 +4354,9 @@ async function fetchChatMessages() {
 function renderUserChatMessages(messages) {
     const container = document.getElementById('chat-message-list');
     if (!container || !currentUser) return;
+    
+    const getUID = (u) => u ? (u.id || u._id || String(u)) : null;
+    const myId = getUID(currentUser);
 
     if (activeChatAdId !== lastRenderedChatAdId || activeChatReceiverId !== lastRenderedPartnerId) {
         container.innerHTML = '';
@@ -4363,8 +4377,8 @@ function renderUserChatMessages(messages) {
         messages.forEach(msg => {
             const msgId = String(msg._id || msg.id);
             if (!existingMsgIds.has(msgId)) {
-                const senderId = String(msg.senderId._id || msg.senderId);
-                const isMe = senderId === String(currentUser.id);
+                const sId = getUID(msg.senderId);
+                const isMe = sId === myId;
                 const el = document.createElement('div');
                 el.className = `message ${isMe ? 'user-message' : 'ai-message'}`;
                 el.style.backgroundColor = isMe ? 'var(--primary-color)' : 'rgba(255,255,255,0.05)';

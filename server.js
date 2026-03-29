@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const https = require('https');
+const fetch = require('node-fetch');
 
 const app = express();
 const jwtSecret = process.env.JWT_SECRET || 'lunnar_secret_key_2026';

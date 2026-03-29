@@ -581,6 +581,34 @@ app.delete('/api/user/saved-searches/:id', authenticateToken, async (req, res) =
     }
 });
 
+// ===== LUNNAR AI (GROQ) PROXY =====
+app.post('/api/ai/chat', async (req, res) => {
+    try {
+        const apiKey = process.env.GROQ_API_KEY;
+        if (!apiKey) return res.status(500).json({ message: 'API kulcs nincs beállítva a szerveren.' });
+
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(req.body)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.text();
+            throw new Error(`Groq API hiba: ${response.status} ${errorData}`);
+        }
+
+        const data = await response.json();
+        res.json(data);
+    } catch (error) {
+        console.error("AI Proxy Error:", error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });

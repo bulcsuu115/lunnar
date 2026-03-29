@@ -1,7 +1,7 @@
 // =============================================
-// LUNNAR — Main Application Logic
-// Dark futuristic theme + AutoScout24 functions
+// LUNNAR v2.5.3 — CACHE BUSTER
 // =============================================
+console.log('%c LUNNAR v2.5.3 %c', 'background: #005bea; color: white; padding: 2px 5px; border-radius: 3px; font-weight: bold;', '');
 
 // ===== THEME TOGGLE =====
 const themeToggle = document.getElementById('theme-toggle');
@@ -79,6 +79,7 @@ function initStars() {
     resizeStarCanvas();
     stars = [];
     for (let i = 0; i < STAR_COUNT; i++) stars.push(new Star());
+    updateHeroRect(); // Fix: Call this immediately so rect is populated
     animateStars();
 }
 
@@ -440,7 +441,7 @@ const CAR_IMAGES = [
 // ===== BACKEND CONFIG =====
 const API_BASE_URL = (window.location.hostname === 'lunnar.onrender.com') 
     ? '/api' 
-    : 'https://lunnar.onrender.com/api'; 
+    : 'http://localhost:5000/api'; 
 
 // ===== GENERATE CARS =====
 function generateCars(count = 12) {
@@ -870,7 +871,7 @@ function initBrands() {
                     // Stagger cards and MAKE SURE THEY ARE VISIBLE
                     const items = brandsSection.querySelectorAll('.brand-item');
                     items.forEach((item, index) => {
-                        item.style.transitionDelay = `${index * 50}ms`;
+                        item.style.transitionDelay = `${Math.min(index * 10, 150)}ms`;
                         item.classList.add('visible'); // Force visible state
                     });
                     // Once revealed, we don't need to observe anymore
@@ -927,7 +928,7 @@ function renderCars(cars) {
     // Staggered fade-in
     requestAnimationFrame(() => {
         grid.querySelectorAll('.fade-in').forEach((el, i) => {
-            setTimeout(() => el.classList.add('visible'), i * 80);
+            setTimeout(() => el.classList.add('visible'), Math.min(i * 15, 300));
         });
     });
 }
@@ -1070,7 +1071,7 @@ function loadAndApplyFilters() {
             });
             
             filterCars();
-        }, 100);
+        }, 10);
     } catch (e) { console.warn('Hiba a szűrők betöltésekor', e); }
 }
 
@@ -1638,7 +1639,7 @@ function renderCarsIn(cars, grid, isProfileView = false) {
     // Staggered fade-in (Standard)
     requestAnimationFrame(() => {
         grid.querySelectorAll('.fade-in').forEach((el, i) => {
-            setTimeout(() => el.classList.add('visible'), i * 80);
+            setTimeout(() => el.classList.add('visible'), Math.min(i * 15, 300));
         });
     });
 
@@ -3301,7 +3302,7 @@ async function fetchMyAds(searchQuery = '') {
 
 function renderCarCard(car, isProfileView = false) {
     const isFavorite = favorites.includes(car.id?.toString()) || favorites.includes(car._id?.toString());
-    const firstImg = car.images && car.images.length > 0 ? car.images[0] : (car.img || 'https://via.placeholder.com/400x300?text=Nincs+kép');
+    const firstImg = car.images && car.images.length > 0 ? car.images[0] : (car.img || 'https://placehold.co/400x300?text=Nincs+kép');
     const price = typeof formatPrice === 'function' ? formatPrice(car.price) : car.price + ' Ft';
     const km = typeof formatKm === 'function' ? formatKm(car.km) : car.km + ' km';
 
@@ -3615,11 +3616,10 @@ function initAiChat() {
         messages.appendChild(typing);
         messages.scrollTop = messages.scrollHeight;
 
-        // Process with slight delay for natural feel
+        // We no longer remove the typing indicator here. We pass it to the process function.
         setTimeout(() => {
-            if (typing.parentElement) typing.remove();
-            processChatQuery(text);
-        }, 400 + Math.random() * 400);
+            processChatQuery(text, typing);
+        }, 300);
     };
 
     sendBtn.addEventListener('click', sendMessage);
@@ -3640,17 +3640,23 @@ function initAiChat() {
         messages.scrollTop = messages.scrollHeight;
     }
 
-    async function processChatQuery(text) {
+    async function processChatQuery(text, typing) {
         // Use LUNNAR_AI engine
         const result = await LUNNAR_AI.generateResponse(text);
 
-        if (result.filters && result.filters.hasFilters) {
+        // Remove typing indicator ONLY AFTER the response is received
+        if (typing && typing.parentElement) typing.remove();
+
+        // Handle filter reset request
+        if (result.reset) {
+            resetMainFilters();
+            filterCars();
+        } else if (result.filters && result.filters.hasFilters) {
             const { hasFilters, ...cleanFilters } = result.filters;
             applyDetectedFilters(cleanFilters);
-            appendMessage(result.reply, 'ai-message', true);
-        } else {
-            appendMessage(result.reply, 'ai-message', true);
         }
+
+        appendMessage(result.reply, 'ai-message', true);
     }
 
     // ===== APPLY FILTERS FROM AI =====
@@ -3682,6 +3688,7 @@ function initAiChat() {
         if (filters.transmission) { const s = document.getElementById('transmission-select'); if (s) s.value = filters.transmission; }
         if (filters.bodyType) { const s = document.getElementById('body-select'); if (s) s.value = filters.bodyType; }
         if (filters.color) { const s = document.getElementById('color-select'); if (s) s.value = filters.color; }
+        if (filters.city) { const c = document.getElementById('city-search'); if (c) c.value = filters.city; }
         if (filters.yearFrom) {
             const y = Number(filters.yearFrom);
             const ySel = document.getElementById('year-from');
@@ -4273,7 +4280,7 @@ function renderUserInbox(conversations) {
         const partnerIdStr = String(c.otherPartyId?._id || c.otherPartyId?.id || c.otherPartyId);
         
         const adTitle = escapeHTML(`${ad.brand || 'Ismeretlen'} ${ad.model || 'Autó'}`);
-        const adImg = ad.images && ad.images[0] ? ad.images[0] : (ad.img || 'https://via.placeholder.com/100x70?text=Auto');
+        const adImg = ad.images && ad.images[0] ? ad.images[0] : (ad.img || 'https://placehold.co/100x70?text=Auto');
         return `
             <div class="inbox-item-wrapper">
                 <button class="inbox-delete-btn" onclick="event.stopPropagation(); deleteConversation('${adIdStr}', '${partnerIdStr}')" title="Beszélgetés törlése">×</button>
@@ -4728,7 +4735,7 @@ document.getElementById('user-chat-close')?.addEventListener('click', closeUserC
 
 // Initialize history
 document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(renderSearchHistory, 500);
+    renderSearchHistory();
     const clearBtnSidebar = document.getElementById('clear-all-history');
     if (clearBtnSidebar) clearBtnSidebar.addEventListener('click', clearAllSearchHistory);
     
